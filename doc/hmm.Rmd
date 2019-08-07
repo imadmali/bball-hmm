@@ -1,0 +1,74 @@
+---
+title: "HMM"
+author: "Imad Ali"
+date: "8/5/2019"
+output: 
+  html_document:
+    toc: true
+    theme: cosmo
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+## Simple HMM Example
+
+```{r fig.align='center', fig.height=8, fig.width=9}
+hmm_data <- readRDS("../data/hmm_example_data.RDS")
+z <- hmm_data$z
+y <- hmm_data$y
+par(mfrow=c(2,1))
+plot(hmm_data$z, type="s",
+     main = "Latent States",
+     ylab = "State Value",
+     xlab = "Time",
+     ylim = c(0.5,2.5), yaxt = "n")
+axis(2, 1:2, 1:2)
+plot(hmm_data$y, type = "l",
+     main = "Observed Output",
+     ylab = "Observation Value",
+     xlab = "Time")
+y_plt <- hmm_data$y
+y_plt[hmm_data$z==1] <- NA
+lines(y_plt, lwd = 3)
+legend("bottomright", c("State 1","State 2"), lty = c(1,1), lwd = c(1,3), cex = 0.8)
+dev.off()
+```
+
+## Tagging Drive Events
+
+### Formatting the Data
+
+```{r fig.align='center', fig.height=8, fig.width=9}
+drive_data <- readRDS("../data/evt140_0021500411.RDS")
+par(mfrow = c(2,1))
+plot(drive_data$game$lavine_dist, type = "l",
+     xlab = "Time (25hz)", ylab = "Distance from Hoop")
+plot(drive_data$game$lavine_speed, type = "l",
+     xlab = "Time (25hz)", ylab = "Speed")
+```
+
+```{r fig.align='center', fig.height=8, fig.width=9}
+
+lavine_speed_smooth <- rep(drive_data$game$lavine_speed[2],2)
+for (i in 3:nrow(drive_data$game))
+  lavine_speed_smooth[i] <- mean(drive_data$game$lavine_speed[(i-2):i], na.rm=TRUE)
+
+drive_data <- readRDS("../data/evt140_0021500411.RDS")
+par(mfrow = c(2,1))
+plot(drive_data$game$lavine_speed, type = "l",
+     main = "Raw Speed",
+     xlab = "Time (25hz)", ylab = "Speed")
+plot(lavine_speed_smooth, type = "l",
+     main = "Smooth Speed",
+     xlab = "Time (25hz)", ylab = "Speed")
+```
+
+### Specifying and Fitting the Model
+
+## Defensive Assignment
+
+## Conclusion

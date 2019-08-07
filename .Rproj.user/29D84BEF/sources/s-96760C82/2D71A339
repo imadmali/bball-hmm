@@ -1,0 +1,22 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1565154051091.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "3665300673",
+    "id" : "2D71A339",
+    "lastKnownWriteTime" : 1565154070,
+    "last_content_update" : 1565154070896,
+    "path" : "~/Desktop/Git/drive_nba/.gitignore",
+    "project_path" : ".gitignore",
+    "properties" : {
+        "cursorPosition" : "1,9",
+        "scrollLine" : "0"
+    },
+    "relative_order" : 5,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "gitignore"
+}

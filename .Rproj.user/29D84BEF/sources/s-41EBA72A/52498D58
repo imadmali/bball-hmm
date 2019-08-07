@@ -1,0 +1,23 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1564887989355.000,
+    "dirty" : true,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "52498D58",
+    "lastKnownWriteTime" : 1564909029,
+    "last_content_update" : 1564909041431,
+    "path" : "~/Desktop/Git/drive_nba/hmm_example_fit.R",
+    "project_path" : "hmm_example_fit.R",
+    "properties" : {
+        "cursorPosition" : "26,0",
+        "scrollLine" : "19",
+        "tempName" : "Untitled1"
+    },
+    "relative_order" : 6,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

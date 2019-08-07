@@ -1,0 +1,6 @@
+"0","lavine_speed_smooth <- rep(drive_data$game$lavine_speed[2],2)"
+"0","for (i in 3:nrow(drive_data$game))"
+"0","  lavine_speed_smooth[i] <- mean(drive_data$game$lavine_speed[(i-2):i], na.rm=TRUE)"
+"0","drive_data <- readRDS(""../data/evt140_0021500411.RDS"")"
+"0","par(mfrow = c(2,1))"
+"0","plot(drive_data$game$lavine_speed, type = ""l"")"

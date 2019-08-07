@@ -1,0 +1,22 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1564888089411.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "634701244",
+    "id" : "4AD0F32B",
+    "lastKnownWriteTime" : 1564908157,
+    "last_content_update" : 1564908157118,
+    "path" : "~/Desktop/Git/drive_nba/models/hmm_example.stan",
+    "project_path" : "models/hmm_example.stan",
+    "properties" : {
+        "cursorPosition" : "21,33",
+        "scrollLine" : "11"
+    },
+    "relative_order" : 4,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "stan"
+}

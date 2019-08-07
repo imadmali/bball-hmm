@@ -1,0 +1,22 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1564635740734.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "3028974727",
+    "id" : "3C4B82C8",
+    "lastKnownWriteTime" : 1508772360,
+    "last_content_update" : 1508772360,
+    "path" : "~/Desktop/Git/drive_nba/models/drive_model.stan",
+    "project_path" : "models/drive_model.stan",
+    "properties" : {
+        "cursorPosition" : "70,29",
+        "scrollLine" : "60"
+    },
+    "relative_order" : 3,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "stan"
+}

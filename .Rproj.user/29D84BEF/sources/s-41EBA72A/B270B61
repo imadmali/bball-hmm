@@ -1,0 +1,23 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1564460009376.000,
+    "dirty" : true,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "225655536",
+    "id" : "B270B61",
+    "lastKnownWriteTime" : 1564469738,
+    "last_content_update" : 1564635733701,
+    "path" : "~/Desktop/Git/drive_nba/drive_nba.R",
+    "project_path" : "drive_nba.R",
+    "properties" : {
+        "cursorPosition" : "2,8",
+        "scrollLine" : "0",
+        "tempName" : "Untitled1"
+    },
+    "relative_order" : 1,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}
