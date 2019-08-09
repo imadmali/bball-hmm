@@ -6,8 +6,7 @@ data {
 
 parameters {
   simplex[K] theta[K];
-  // real psi[K];
-  positive_ordered[K] psi;
+  real psi[K];
 }
 
 model {

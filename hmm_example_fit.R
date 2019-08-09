@@ -41,4 +41,4 @@ lines(y_plt, lwd = 3)
 legend("bottomright", c("State 1","State 2"), lty = c(1,1), lwd = c(1,3), cex = 0.8)
 dev.off()
 
-saveRDS(list(z=z,y=y), "data/hmm_example_data.RDS")
+# saveRDS(list(z=z,y=y), "data/hmm_example_data.RDS")
