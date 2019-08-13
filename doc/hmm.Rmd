@@ -418,7 +418,13 @@ text(mu_0b$mu5[1], mu_0b$mu5[2], expression(mu[5]), cex = 0.8)
 
 ### Player Tracking Data
 
-Now that we are confident with our model we can apply it to the player tracking data. We continue with the data from the previous section. This defines an easy to work with possession where the Minnesota Timberwolves are the offensive team and the Boston Celtics are the defensive team. The model above shows how to define defensive assignment for only one defender. In order to apply this to possesion level player tracking data we need to determine defensive assignment for each of the 5 defenders. We implement is in Stan by adding an extra dimension $D=5$ to the observed data $y$ and wrap the forward algorithm and the Viterbi algorithm in a loop to determind defensive assignment for each of the 5 defenders. Now the dimensions of $y$ are (number of defenders, number of states (offenders), number of time steps, number of coordinates (2)), which translates to (5,5,N,2) where N is defined by the length of the possession.
+Now that we are confident with our model we can apply it to the player tracking data. We continue with the data from the previous section which is based on a drive possession. This defines an easy to work with possession where the Minnesota Timberwolves are the offensive team and the Boston Celtics are the defensive team.
+
+So far the models in this section have shown how to infer defensive assignment for only one defender. In order to apply this to possesion level player tracking data we need to determine defensive assignment for each of the 5 defenders. We implement this in Stan by adding an extra dimension $D=5$ to the observed data $y$ and wrap the forward algorithm and the Viterbi algorithm in a loop to determine defensive assignment for each of the 5 defenders. Now the dimensions of $y$ are (number of defenders, number of states (offenders), number of time steps, number of coordinates (2)), which translates to (5,5,N,2) where N is defined by the length of the possession.
+
+Below we fit HMM to the player tracking to data.
+
+Finally, we can visualize what defensive assignment looks like when inferred from a HMM.
 
 ## Conclusion
 
