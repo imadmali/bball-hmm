@@ -1,3 +1,5 @@
+# HMM example data
+
 # transition matrix (2 states)
 theta <- rbind(c(0.8,0.2),c(0.1,0.9))
 # emmission vector (2 states)
@@ -29,7 +31,7 @@ y_plt[z==1] <- NA
 lines(y_plt, col = "red")
 dev.off()
 
-saveRDS(list(z=z,y=y), "data/hmm_example_data.RDS")
+saveRDS(list(z=z,y=y), "data/hmm_example.RDS")
 
 # J <- 100
 # x_seq <- seq(0, 1, length.out = J)
