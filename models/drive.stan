@@ -1,75 +1,57 @@
-functions {
-  int swap_state(int state) {
-    return(state == 1 ? 2 : 1);
-  }
-}
+// drive model
 data {
-  int<lower=1> K;              // number of states (1 = none, 2 = drive)
-  // int<lower=1> V;  // num words
-  // int<lower=0> T;  // num supervised items
-  int<lower=1> T_unsup;  // length of process
-  // int<lower=1,upper=V> w[T]; // words
-  // int<lower=1,upper=K> z[T]; // categories
-  real<lower=0> u[T_unsup];    // 1/speed
-  real<lower=0> v[T_unsup];    // hoop distance
-  matrix<lower=0>[K,K] alpha;  // transit prior
-  // vector<lower=0>[V] beta;   // emit prior
+  int<lower=1> K;               // number of states (1 = none, 2 = drive)
+  int<lower=1> N;         // length of process
+  real u[N];     // 1/speed
+  real v[N];     // hoop distance
+  matrix<lower=0>[K,K] alpha;   // transit prior
 }
 parameters {
   simplex[K] theta[K];          // transit probs
-  // enforce an ordering: phi[1] <= phi[2]
-  positive_ordered[K] phi;      // emission prob for 1/speed
-  positive_ordered[K] lambda;   // emission prob for hoop dist
+  // enforce an ordering: phi[1] <= phi[2] 
+  positive_ordered[K] phi;      // emission parameter for 1/speed
+  positive_ordered[K] lambda;   // emission parameter for hoop dist
 }
 model {
-  // priors (break symmetry)
-  theta[1] ~ dirichlet(alpha[1,]');
-  theta[2] ~ dirichlet(alpha[2,]');
-  phi[1] ~ normal(0,1);
-  phi[2] ~ normal(3,1);
-  lambda[1] ~ normal(0,1);
-  lambda[2] ~ normal(3,1);
+  // priors
+  for (k in 1:K)
+    target += dirichlet_lpdf(theta[k] | alpha[k,]');
+  target+= normal_lpdf(phi[1] | 0, 1);
+  target+= normal_lpdf(phi[2] | 3, 1);
+  target+= normal_lpdf(lambda[1] | 0, 1);
+  target+= normal_lpdf(lambda[2] | 3, 1);
+  // forward algorithm
   {
-    // forward algorithm computes log p(u|...)
     real acc[K];
-    real gamma[T_unsup,K];
+    real gamma[N,K];
     for (k in 1:K)
-      // gamma[1,k] = (log(phi[k]) - phi[k] * u[1]) + (log(lambda[swap_state(k)]) - lambda[swap_state(k)] * v[1]);
-      gamma[1,k] = (log(phi[k]) - phi[k] * u[1]) + (log(lambda[k]) - lambda[k] * v[1]);
-    for (t in 2:T_unsup) {
+      gamma[1,k] = exponential_lpdf(u[1] | phi[k]) + exponential_lpdf(v[1] | lambda[k]);
+    for (t in 2:N) {
       for (k in 1:K) {
         for (j in 1:K)
-          //acc[j] = gamma[t-1,j] + log(theta[j,k]) + (log(phi[k]) - phi[k] * u[t]) + //(log(lambda[swap_state(k)]) - lambda[swap_state(k)] * v[t]);
-          acc[j] = gamma[t-1,j] + log(theta[j,k]) + (log(phi[k]) - phi[k] * u[t]) + (log(lambda[k]) - lambda[k] * v[t]);
+          acc[j] = gamma[t-1,j] + log(theta[j,k]) + exponential_lpdf(u[t] | phi[k]) + exponential_lpdf(v[t] | lambda[k]);
         gamma[t,k] = log_sum_exp(acc);
       }
     }
-    target+= log_sum_exp(gamma[T_unsup]);
+    target+= log_sum_exp(gamma[N]);
   }
 }
+
 generated quantities {
-  int<lower=1,upper=K> y_star[T_unsup];
+  int<lower=1,upper=K> y_star[N];
   real log_p_y_star;
+  // Viterbi algorithm
   {
-    // Viterbi algorithm
-    int back_ptr[T_unsup,K];
-    real best_logp[T_unsup,K];
+    int back_ptr[N,K];
+    real best_logp[N,K];
     for (k in 1:K)
-      // best_logp[1,K] = (log(phi[k]) - phi[k] * u[1]) +
-      //                  (log(lambda[swap_state(k)]) - lambda[swap_state(k)] * v[1]);
-      best_logp[1,K] = (log(phi[k]) - phi[k] * u[1]) +
-                       (log(lambda[k]) - lambda[k] * v[1]);
-    for (t in 2:T_unsup) {
+      best_logp[1,K] = exponential_lpdf(u[1] | phi[k]) + exponential_lpdf(v[1] | lambda[k]);
+    for (t in 2:N) {
       for (k in 1:K) {
         best_logp[t,k] = negative_infinity();
         for (j in 1:K) {
           real logp;
-          // logp = best_logp[t-1,j] + log(theta[j,k]) +
-          //        (log(phi[k]) - phi[k] * u[t]) +
-          //        (log(lambda[swap_state(k)]) - lambda[swap_state(k)] * v[t]);
-          logp = best_logp[t-1,j] + log(theta[j,k]) +
-                 (log(phi[k]) - phi[k] * u[t]) +
-                 (log(lambda[k]) - lambda[k] * v[t]);
+          logp = best_logp[t-1,j] + log(theta[j,k]) + exponential_lpdf(u[t] | phi[k]) + exponential_lpdf(v[t] | lambda[k]);
           if (logp > best_logp[t,k]) {
             back_ptr[t,k] = j;
             best_logp[t,k] = logp;
@@ -77,11 +59,11 @@ generated quantities {
         }
       }
     }
-    log_p_y_star = max(best_logp[T_unsup]);
+    log_p_y_star = max(best_logp[N]);
     for (k in 1:K)
-      if (best_logp[T_unsup,k] == log_p_y_star)
-        y_star[T_unsup] = k;
-    for (t in 1:(T_unsup - 1))
-      y_star[T_unsup - t] = back_ptr[T_unsup - t + 1, y_star[T_unsup - t + 1]];
+      if (best_logp[N,k] == log_p_y_star)
+        y_star[N] = k;
+    for (t in 1:(N - 1))
+      y_star[N - t] = back_ptr[N - t + 1, y_star[N - t + 1]];
   }
 }
