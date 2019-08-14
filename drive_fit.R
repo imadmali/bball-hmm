@@ -18,17 +18,17 @@ lavine_dist <- lavine_dist[-1]
 
 stan_data <- list(N = length(lavine_speed),
                   K = 2,
-                  u = lavine_speed,
-                  v = 1/lavine_dist,
-                  alpha = rbind(c(6,2),c(2,6)))
+                  u = 1/lavine_speed,
+                  v = lavine_dist,
+                  alpha = rbind(c(4,2),c(2,4)))
 
 fit <- stan("models/drive.stan", data = stan_data, chains = 4, iter = 1e3)
 
 samples <- as.matrix(fit)
 y_star <- samples[,grep("^y_star", colnames(samples))]
 y_star <- colMeans(y_star)
-y_star
-mcmc_trace(as.array(fit), regex_pars = "^theta|^phi|^lambda")
+
+# mcmc_trace(as.array(fit), regex_pars = "^theta|^phi|^lambda|^y_star\\[1\\]")
 
 ani.options(ani.width=600, ani.height=900, interval= 0.05, autobrowse = FALSE, ani.dev = "png", ani.type = "png")
 saveVideo({
@@ -38,7 +38,7 @@ saveVideo({
     abline(v = i, col = "red", lwd = 2)
     plot(lavine_speed, type = "l", ylab = "1/Speed", xlab = "Time (25hz)")
     abline(v = i, col = "red", lwd = 2)
-    plot(y_star, pch = 20, cex = 0.5, ylab = "State", xlab = "Time (25hz)",
+    plot(round(y_star), type = "l", pch = 1, cex = 0.5, ylab = "State", xlab = "Time (25hz)",
          ylim = c(0.5, 2.5), yaxt = "n")
     axis(2, c(1,2), c("None", "Drive"), las = 2)
     abline(v = i, col = "red", lwd = 2)
