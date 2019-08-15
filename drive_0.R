@@ -12,7 +12,6 @@ lavine_dist <- drive$game$lavine_dist
 
 na_indx <- which(is.na(lavine_speed))
 
-# lavine_speed <- log(1/lavine_speed[-1])  # improper because using exp in model
 lavine_speed <- lavine_speed[-1]
 lavine_dist <- lavine_dist[-1]
 
@@ -22,13 +21,14 @@ stan_data <- list(N = length(lavine_speed),
                   v = lavine_dist,
                   alpha = rbind(c(4,2),c(2,4)))
 
-fit <- stan("models/drive.stan", data = stan_data, chains = 4, iter = 1e3)
+fit <- stan("models/drive_0.stan", data = stan_data, chains = 4, iter = 1e3)
+saveRDS(list(fit = fit, data = stan_data), "results/drive_m0.RDS")
+
+# mcmc_trace(as.array(fit), regex_pars = "^theta|^phi|^lambda|^y_star\\[1\\]")
 
 samples <- as.matrix(fit)
 y_star <- samples[,grep("^y_star", colnames(samples))]
 y_star <- colMeans(y_star)
-
-# mcmc_trace(as.array(fit), regex_pars = "^theta|^phi|^lambda|^y_star\\[1\\]")
 
 ani.options(ani.width=600, ani.height=900, interval= 0.05, autobrowse = FALSE, ani.dev = "png", ani.type = "png")
 saveVideo({
@@ -46,4 +46,4 @@ saveVideo({
     text(1,48, paste0("Q",drive$game$quarter[i]," | GC: ",drive$game$game_clock[i]), pos=4, cex=1.5)
     plot_shot(drive, loop = i, static = F)
   }
-}, video.name = paste0("media/drive_event_140_hmm",".mp4"))
+}, video.name = paste0("media/drive_event_140_m0",".mp4"))

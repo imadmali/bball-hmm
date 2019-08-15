@@ -1,9 +1,9 @@
-// drive model
+// drive model (exponential dist)
 data {
   int<lower=1> K;               // number of states (1 = none, 2 = drive)
-  int<lower=1> N;         // length of process
-  real u[N];     // 1/speed
-  real v[N];     // hoop distance
+  int<lower=1> N;               // length of process
+  real u[N];                    // 1/speed
+  real v[N];                    // hoop distance
   matrix<lower=0>[K,K] alpha;   // transit prior
 }
 parameters {
