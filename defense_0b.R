@@ -7,6 +7,7 @@ defense_example <- readRDS("data/defense_example.RDS")
 alpha <- c(3,3,3)  # priors on convex combination parameter
 defense_example$alpha <- alpha
 fit <- stan("models/defense_0b.stan", data = defense_example, chains = 4, iter = 1e3)
+saveRDS(list(fit = fit, data = stan_data), "results/defense_0b.RDS")
 
 samples <- as.matrix(fit)
 y_star <- samples[,grep("^y_star", colnames(samples))]

@@ -7,6 +7,7 @@ defense_example <- readRDS("data/defense_example.RDS")
 lambda <- c(1/3,1/3,1/3)  # fixing convex combination parameter
 defense_example$lambda <- lambda
 fit <- stan("models/defense_0a.stan", data = defense_example, chains = 4, iter = 1e3)
+saveRDS(list(fit = fit, data = stan_data), "results/defense_0a.RDS")
 
 samples <- as.matrix(fit)
 y_star <- samples[,grep("^y_star", colnames(samples))]

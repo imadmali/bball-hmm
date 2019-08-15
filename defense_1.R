@@ -2,9 +2,9 @@ library(rstan)
 rstan_options(auto_write = TRUE)
 
 defense_example <- readRDS("data/defense_example.RDS")
-lambda <- c(1/3,1/3,1/3)
-defense_example$lambda <- lambda
-fit <- stan("models/def_model0a.stan", data = defense_example, chains = 4, iter = 1e3)
+alpha <- c(3,3,3)  # priors on convex combination parameter
+defense_example$alpha <- alpha
+fit <- stan("models/defense_1.stan", data = defense_example, chains = 4, iter = 1e3)
 
 samples <- as.matrix(fit)
 y_star <- samples[,grep("^y_star", colnames(samples))]
