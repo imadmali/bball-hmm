@@ -1,13 +1,14 @@
 library(rstan)
 rstan_options(auto_write = TRUE)
 
-hmm_data <- readRDS("data/hmm_example_data.RDS")
+hmm_data <- readRDS("data/hmm_example.RDS")
 
 stan_data <- list(N = length(hmm_data$y),
                   K = 2,
                   y = hmm_data$y)
 
 hmm_fit <- stan("models/hmm_example.stan", data = stan_data, iter = 1e3, chains = 4)
+saveRDS(list(fit = hmm_fit, data = stan_data), "results/hmm_example.RDS")
 
 samples <- as.matrix(hmm_fit)
 
@@ -24,6 +25,7 @@ colMeans(samples[,psi_indx])
 y_star <- colMeans(samples[,y_star_indx])
 
 # visualization
+pdf("media/hmm_example.pdf", width = 12, height = 9)
 par(mfrow=c(2,1))
 plot(hmm_data$z, type="l",
      main = "Latent States",
@@ -40,5 +42,3 @@ y_plt[hmm_data$z==1] <- NA
 lines(y_plt, lwd = 3)
 legend("bottomright", c("State 1","State 2"), lty = c(1,1), lwd = c(1,3), cex = 0.8)
 dev.off()
-
-# saveRDS(list(z=z,y=y), "data/hmm_example_data.RDS")

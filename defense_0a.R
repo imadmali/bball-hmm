@@ -7,7 +7,7 @@ defense_example <- readRDS("data/defense_example.RDS")
 lambda <- c(1/3,1/3,1/3)  # fixing convex combination parameter
 defense_example$lambda <- lambda
 fit <- stan("models/defense_0a.stan", data = defense_example, chains = 4, iter = 1e3)
-saveRDS(list(fit = fit, data = stan_data), "results/defense_0a.RDS")
+saveRDS(list(fit = fit, data = defense_example), "results/defense_0a.RDS")
 
 samples <- as.matrix(fit)
 y_star <- samples[,grep("^y_star", colnames(samples))]
@@ -23,6 +23,7 @@ mu4 <- t(rbind(o[4,1,],h,b[1,])) %*% lambda %>% t %>% c
 mu5 <- t(rbind(o[5,1,],h,b[1,])) %*% lambda %>% t %>% c
 
 # plot
+pdf("media/defense_0a.pdf", height = 8, width = 8)
 plt_defense_example(defense_example, main = expression(paste("Defense Example: ", Lambda, " Fixed")))
 lambda_txt <- sprintf("%.2f", round(lambda,2), collapse=",")
 lambda_txt <- paste(lambda_txt, collapse = ",")
@@ -33,6 +34,7 @@ text(mu2[1], mu2[2], expression(mu[2]), cex = 0.8)
 text(mu3[1], mu3[2], expression(mu[3]), cex = 0.8)
 text(mu4[1], mu4[2], expression(mu[4]), cex = 0.8)
 text(mu5[1], mu5[2], expression(mu[5]), cex = 0.8)
+dev.off()
 
 # determine which convex combination each defensive position is closest to
 dist_mat <- list(o1 = apply(d, 1, function(x){dist(rbind(mu1,x))}),
