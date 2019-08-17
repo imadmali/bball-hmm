@@ -43,7 +43,7 @@ The plot below outlines a HMM with one sequence of observed outcomes generated f
 
 You can see how state 1 corresponds to smaller values of the outcome while state 2 corresponds to relatively higher values of the outcome. In most real-word situations you do not know the state value at each time step because it is hidden. So in order to fit the model and infer the state sequence you first need to make an assumption as to how many possible states there might be at each time step.
 
-```{r fig.align='center', fig.height=8, fig.width=9}
+```{r fig.align='center', fig.height=6, fig.width=9}
 hmm_data <- readRDS("../data/hmm_example.RDS")
 z <- hmm_data$z
 y <- hmm_data$y
@@ -179,18 +179,18 @@ The post estimation steps that we take to validate are,
 For the transition probabilities $\boldsymbol\theta{}$ and the parameters associated with the emission probabilities $\vec{\psi}$ we have the following parameter estimates.
 
 ```{r}
-print(hmm_fit, pars = "y_star", include = FALSE)
+print(hmm_fit, pars = "y_star", include = FALSE, probs = c(0.05,0.95))
 ```
 
 With regards to traceplots to monitor convergence we have the following. There is evidence of good mixing between the parameter chains.
 
-```{r fig.align='center', fig.width=6, fig.height=10}
-mcmc_trace(as.array(hmm_fit), regex_pars = "^theta\\[|^psi\\[", facet_args = list(ncol = 2))
+```{r fig.align='center', fig.height=5, fig.width=10}
+mcmc_trace(as.array(hmm_fit), regex_pars = "^theta\\[|^psi\\[", facet_args = list(nrow = 2))
 ```
 
 In the situation where priors are defined but an ordering is not enforced the lack of parameter convergence looks like the following (see `hmm_example_bad_fit.R` for code).
 
-```{r fig.align='center', fig.width=6, fig.height=10}
+```{r fig.align='center', fig.height=5, fig.width=10}
 hmm_bad_stan <- readRDS("../results/hmm_example_bad.RDS")
 mcmc_trace(as.array(hmm_bad_stan$fit), regex_pars = "^theta\\[|^psi\\[", facet_args = list(ncol = 2))
 ```
@@ -218,7 +218,8 @@ indxs <- sample(length(y_hat), 100, replace = FALSE)
 plot(hmm_data$y, type = "n",
      main = "Observed vs Predicted Output",
      ylab = "Observation Value",
-     xlab = "Time")
+     xlab = "Time",
+     ylim = c(0,11))
 for (i in indxs) {
   lines(y_hat[[i]], col = "#ff668890")
 }
@@ -229,7 +230,7 @@ legend("bottomright", c("Observed","Predicted"), col = c("#000000","#ff668890"),
 
 Below we overlay the predicted states with the true states. Similar to the conclusion above, our predictions line up nicely with the true values. Note that we can only do this because we know the true value of the hidden states. In situations where the states are truly hidden this step is infeasible.
 
-```{r fig.align='center', fig.width=8, fig.height=9}
+```{r fig.align='center', fig.height=6, fig.width=9}
 # visualization
 par(mfrow=c(2,1))
 plot(hmm_data$z, type="s",
@@ -287,7 +288,7 @@ Using the player tracking data we can construct the speed and distance metrics a
 
 It is apparent that the speed metric is pretty noisy. This may be attributed to the fact that time is measured in 25 hertz (25ths of a second) and that location is determined by a computer vision algorithm and not a tracking chip attached to the player. They are many methods that can be used to smooth the data (e.g. splines). Here we use a basic rolling mean with a window of three time steps. In our example the data is not so noisy that it would affect the performance of our model so the smoothing is mostly for aesthetics and ease of interpretation. If the variance in the series was more extreme then we might want consider implementing a better smoothing method before fitting our model.
 
-```{r fig.align='center', fig.height=12, fig.width=9}
+```{r fig.align='center', fig.height=9, fig.width=6}
 drive_data <- readRDS("../data/evt140_0021500411.RDS")
 
 lavine_speed_smooth <- rep(drive_data$game$lavine_speed[2],2)
@@ -335,11 +336,11 @@ Finally, we fit the model to LaVine's data for the single drive event (see `driv
 
 ```{r}
 drive_stan <- readRDS("../results/drive_1.RDS")
-print(drive_stan$fit, pars = 'y_star', include = FALSE)
+print(drive_stan$fit, pars = 'y_star', include = FALSE, probs = c(0.05,0.95))
 ```
 
-```{r fig.align='center', fig.width=6, fig.height=12}
-mcmc_trace(as.array(drive_stan$fit), regex_pars = "^theta\\[|^psi\\[|^lambda\\[", facet_args = list(ncol = 2))
+```{r fig.align='center', fig.height=5, fig.width=10}
+mcmc_trace(as.array(drive_stan$fit), regex_pars = "^theta\\[|^psi\\[|^lambda\\[", facet_args = list(nrow = 2))
 ```
 
 For comparison we implemented the exponential distribution version of the model in `drive_0.R`. In line with our theory we found that the parameter chains struggled to converge in some model runs, validating our approach to use the normal distribution to model the log-transformed data.
@@ -348,7 +349,7 @@ For comparison we implemented the exponential distribution version of the model 
 
 We post-process the state predictions and layer them on top of the original distance/speed plots to see if the predictions lined up with our logic.
 
-```{r fig.align='center', fig.height=12, fig.width=9}
+```{r fig.align='center', fig.height=9, fig.width=6}
 
 samples <- as.matrix(drive_stan$fit)
 y_star <- colMeans(samples[,grep("^y_star", colnames(samples))])
@@ -383,7 +384,7 @@ It looks like things line up nicely. The drive event gets triggered only when th
 
 Our final task is to determine defensive assignment in basketball using HMMs. We follow an approach similar to Franks et al (2015). However, instead of fitting the HMM using the E-M algorithm we fit the model in Stan. Before diving into the model we need to abstract what good basketball defense is, mathematically speaking. Arguably, good defensive positioning means that the defender is somehwere in the triangle defined by the location of the hoop, the ball, and the offensive player in question. An example of this is illustrated below.
 
-```{r fig.align='center', fig.width=5, fig.height=3}
+```{r fig.align='center', fig.width=5, fig.height=5}
 h <- c(0,-1)
 b <- c(0,1.5)
 o <- c(-1,0.5)
@@ -393,10 +394,10 @@ plot(rbind(h,b,o,h), type = "o",
      xlab = "", ylab = "", xaxt = "n", yaxt = "n",
      pch = 20)
 points(d[1],d[2], pch = 20)
-text(h[1],h[2], "hoop", pos = 1)
-text(b[1],b[2], "ball", pos = 3)
-text(o[1],o[2], "offensive player", pos = 2)
-text(d[1],d[2], "defender", pos = 3)
+text(h[1],h[2], "hoop", pos = 1, cex = 0.8)
+text(b[1],b[2], "ball", pos = 3, cex = 0.8)
+text(o[1],o[2], "offensive player", pos = 2, cex = 0.8)
+text(d[1],d[2], "defender", pos = 3, cex = 0.8)
 ```
 
 Using this concept, we model the defender's position as 2 draws from the normal distribution where the location parameter is defined as a convex combination of the hoop, ball, and offensive player. Mathematically we can represent this for each time step as,
@@ -434,7 +435,7 @@ Before applying the model directly to the player tracking data we should check t
 
 The code [here]() simulates an overly simplified basketball possession. For 20 time steps we sample a fixed position of five offensive players (`o1` to `o5`) and the ball. (We do this with trivial noise to mimic the player tracking data.) We include the hoop location as a single coordinate as the position is fixed over time. With all these pieces in place we trace the path of a single defender in a parabola shape around the hoop.
 
-```{r fig.align='center', fig.width=4, fig.height=4}
+```{r fig.align='center', fig.width=6, fig.height=6}
 defense_example <- readRDS("../data/defense_example.RDS") 
 list2env(defense_example, .GlobalEnv)
 # plot
@@ -449,7 +450,7 @@ Below we fit the model to fake data assuming that the convex combination paramet
 ```{r}
 # fixing convex combination parameter
 defense_0a_stan <- readRDS("../results/defense_0a.RDS")
-print(defense_0a_stan$fit, pars = "y_star", include = FALSE)
+print(defense_0a_stan$fit, pars = "y_star", include = FALSE, probs = c(0.05,0.95))
 ```
 
 The model below assumes that $\Gamma$ is not known and has to be estimated from the data. We can still incorporate prior information about defensive positioning by applying the appropriate prior distribution on $\Gamma$. However, this will be less strict compared to declaring $\Gamma$ explicitly. This approach lets us learn about $\Gamma$ from the data. This means that we can compute which positioning defenders favor when in the convex combination (i.e. to they tend to be closer to the ball, hoop, or offensive player).
@@ -457,12 +458,12 @@ The model below assumes that $\Gamma$ is not known and has to be estimated from 
 ```{r}
 # priors on convex combination parameter
 defense_0b_stan <- readRDS("../results/defense_0b.RDS")
-print(defense_0b_stan$fit, pars = "y_star", include = FALSE)
+print(defense_0b_stan$fit, pars = "y_star", include = FALSE, probs = c(0.05,0.95))
 ```
 
 For each model we plot the states associated with each position for the defender (these correspond to the offensive player numbers). Additionally, we plot the convex combination $\mu_k$ for each offensive player. You can see how defensive assignment is related to how close the defender is to $\mu_k$. In this example the difference between fixing and estimating $\Lambda$ is apparent. When we estimate $\Lambda$ the defender favors positioning themselves closer to the offensive player and hoop rather than the ball (this is reflected in larger values of $\lambda$ for the offensive player and ball). 
 
-```{r fig.align='center', fig.width=8, fig.height=4}
+```{r fig.align='center', fig.width=12, fig.height=6}
 samples_0a <- as.matrix(defense_0a_stan$fit)
 samples_0b <- as.matrix(defense_0b_stan$fit)
 y_star_0a <- samples_0a[,grep("^y_star", colnames(samples_0a))]
