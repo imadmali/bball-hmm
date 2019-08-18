@@ -6,6 +6,7 @@ source("graphics.R")
 rstan_options(auto_write = TRUE)
 
 defense <- readRDS("data/defense.RDS")
+
 alpha <- c(3,3,3)  # priors on convex combination parameter
 defense$alpha <- alpha
 defense$K <- 5
@@ -13,7 +14,7 @@ defense$I <- 5
 defense$tau <- 0.1
 
 fit <- stan("models/defense_1.stan", data = defense, chains = 4, iter = 1e3, cores = 4)
-saveRDS(list(fit = fit, data = defense), "results/defense_1.RDS")
+saveRDS(list(fit = fit, data = defense, indxs = indxs), "results/defense_1.RDS")
 
 # mcmc_trace(as.array(fit), regex_pars = "^theta|^lambda")
 
@@ -34,6 +35,7 @@ def_assign <- function(indx, I, state) {
 }
 
 drive <- readRDS("data/evt140_0021500411.RDS")
+
 d <- defense$d
 o <- defense$o
 
@@ -58,4 +60,4 @@ saveVideo({
     for (j in 1:5)
       def_assign(i, j, round(y_star[[j]][1]))
   }
-}, video.name = paste0("media/defense_event_140_m1",".mp4"))
+}, video.name = paste0("media/defense_1",".mp4"))

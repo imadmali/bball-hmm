@@ -75,11 +75,18 @@ plot_shot <- function(obj, loop = 1, static = FALSE) {
     future <- nrow(obj_game)
   }
   else {
-    future <- past + loop
+    future <- loop
+    if (loop > 10)
+      past <- future - 10
+    else
+      past <- 0
   }
+  # else {
+  #   future <- past + loop
+  # }
   # transparent colors
-  home_col <- "#00834880"
-  visitor_col <- "#002B5C80"
+  home_col <- "#00834890"
+  visitor_col <- "#002B5C90"
   # trajectory
   lines(obj_game$x[past:future], obj_game$y[past:future], col = "#ffa50020", lwd = 3)
   lines(obj_game$a1_x[past:future], obj_game$a1_y[past:future], col = visitor_col, lwd = 3)

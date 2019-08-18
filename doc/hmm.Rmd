@@ -1,5 +1,5 @@
 ---
-title: "Tagging Basketball Tracking Data with HMM"
+title: "Tagging Basketball Events with HMM"
 author: "Imad Ali"
 date: "8/5/2019"
 output: 
@@ -156,7 +156,7 @@ generated quantities {
 }
 ```
 
-### Fit the Model
+### Fitting the Model
 
 Now we can fit the model to the data above in order to estimate the paramters `theta` and `mu` along with the hidden state sequence `y_star`.
 
@@ -195,7 +195,7 @@ hmm_bad_stan <- readRDS("../results/hmm_example_bad.RDS")
 mcmc_trace(as.array(hmm_bad_stan$fit), regex_pars = "^theta\\[|^psi\\[", facet_args = list(ncol = 2))
 ```
 
-#### Predictions
+#### Posterior Predictions
 
 Below we plot 100 predicted outcome sequences given the predicted states and emission parameter estimates. Notice how the predictions line up nicely with the observed output values. This is one indication that the data generation process was appropriately modeled.
 
@@ -519,7 +519,13 @@ So far the models in this section have shown how to infer defensive assignment f
 
 Below we fit HMM to the player tracking to data.
 
-Finally, we can visualize what defensive assignment looks like when inferred from a HMM.
+Finally, we can visualize what defensive assignment looks like when inferred from this HMM.
+
+<div align='center'>
+<video autosize:true controls>
+  <source src="../media/defense_1.mp4" type="video/mp4">
+</video>
+</div>
 
 ## Conclusion
 

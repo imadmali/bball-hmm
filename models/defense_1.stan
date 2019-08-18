@@ -1,14 +1,15 @@
-// defensive model 1 (assignment for all 5 defenders)
+// defensive model 1 estimate transition matrix (assignment for all 5 defenders)
 data {
-  int<lower=0> N;  // number of time steps
-  int<lower=0> K;  // number of offensive players
-  int<lower=0> I;  // number of defenders
-  real<lower=0> tau;  // scale parameter associated with convex combination
-  vector[3] alpha;  // prior on convex combination parameters
-  vector[2] h;  // location of hoop
-  vector[2] b[N];  // location of ball (array of size N containing vectors of size 2)
-  vector[2] d[I,N];  // location of defenders (array of size I,K containing vectors of size 2)
-  vector[2] o[K,N];  // location of offensive players (array of size K,N containing vectors of size 2)
+  int<lower=0> N;       // number of time steps
+  int<lower=0> K;       // number of offensive players
+  int<lower=0> I;       // number of defenders
+  real<lower=0> tau;    // scale parameter associated with convex combination
+  vector[3] alpha;      // prior on convex combination parameters
+  vector[K] beta[K];    // prior on transition matrix
+  vector[2] h;          // location of hoop
+  vector[2] b[N];       // location of ball (array of size N containing vectors of size 2)
+  vector[2] d[I,N];     // location of defenders (array of size I,K containing vectors of size 2)
+  vector[2] o[K,N];     // location of offensive players (array of size K,N containing vectors of size 2)
 }
 
 parameters {
@@ -19,6 +20,8 @@ parameters {
 model {
   // priors
   target+= dirichlet_lpdf(lambda | alpha);
+  for (k in 1:K)
+    target+= dirichlet_lpdf(theta[k] | beta[k]);
   // forward algorithm
   for (i in 1:I) {
     real acc[K];
