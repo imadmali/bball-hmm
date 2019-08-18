@@ -1,8 +1,10 @@
-# reshape pt data evt140 for defense hmm in stan
+# reshape pt data evt244 for defense hmm in stan
+# full data: defense_evt244.RDS
+# low res: defense_evt244_low_res.RDS
 
-drive <- readRDS("data/evt140_0021500411.RDS")
+pt <- readRDS("evt244_0021500411.RDS")
 
-game <- drive$game
+game <- pt$game
 
 # indx to reduce resolution
 indxs <- seq(1, nrow(game), by = 10)
@@ -45,5 +47,5 @@ stan_data_low_res <- list(N = length(indxs),
                           o = o[,indxs,],
                           indxs = indxs)
 
-saveRDS(stan_data, "data/defense_evt140.RDS")
-saveRDS(stan_data_low_res, "data/defense_evt140_low_res.RDS")
+saveRDS(stan_data, "defense_evt244.RDS")
+saveRDS(stan_data_low_res, "defense_evt244_low_res.RDS")

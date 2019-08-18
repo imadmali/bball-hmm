@@ -1,4 +1,4 @@
-# fake basketball possession with 1 defender
+# create fake basketball possession with 1 defender (defense_example.RDS)
 
 source("graphics.R")
 
@@ -32,7 +32,7 @@ dat <- list(N = N,
             b = b,
             o = o,
             d = d)
-saveRDS(dat, "data/defense_example.RDS")
+saveRDS(dat, "defense_example.RDS")
 
 # plot
 plt_defense_example(dat, main = "Defense Example")

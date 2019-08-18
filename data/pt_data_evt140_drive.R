@@ -1,9 +1,11 @@
+# create evt140_0021500411.RDS data file with LaVine speed/dist metrics
+
 library(dplyr)
 library(animation)
 
 source("graphics.R")
 
-pt <- readRDS("data/0021500411.RDS")
+pt <- readRDS("0021500411.RDS")
 
 drive <- pt
 drive$game <- pt$game %>%
@@ -36,7 +38,7 @@ for (i in 1:nrow(lavine_coords)) {
 drive$game$lavine_speed <- lavine_speed
 drive$game$lavine_dist <- lavine_dist
 
-saveRDS(drive, "data/evt140_0021500411.RDS")
+saveRDS(drive, "evt140_0021500411.RDS")
 
 # create animation with variables
 ani.options(ani.width=900, ani.height=600, interval= 0.05, autobrowse = FALSE, ani.dev = "png", ani.type = "png")
@@ -46,7 +48,7 @@ saveVideo({
     text(1,48, paste0("Q",drive$game$quarter[i]," | GC: ",drive$game$game_clock[i]), pos=4, cex=1.5)
     plot_shot(drive, loop = i, static = F)
   }
-}, video.name = paste0("media/event_140",".mp4"))
+}, video.name = paste0("../media/event_140",".mp4"))
 
 # create animation with speed/dist variables
 ani.options(ani.width=600, ani.height=700, interval= 0.05, autobrowse = FALSE, ani.dev = "png", ani.type = "png")
@@ -61,7 +63,7 @@ saveVideo({
     text(1,48, paste0("Q",drive$game$quarter[i]," | GC: ",drive$game$game_clock[i]), pos=4, cex=1.5)
     plot_shot(drive, loop = i, static = F)
   }
-}, video.name = paste0("media/event_140_stats",".mp4"))
+}, video.name = paste0("../media/event_140_stats",".mp4"))
 
 # looks like lavine drives between index 300:400
 # during this time his distance from the hoop decreases and his speed increases 

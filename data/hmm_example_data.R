@@ -1,4 +1,4 @@
-# HMM example data
+# HMM example data (hmm_example.RDS)
 
 # transition matrix (2 states)
 theta <- rbind(c(0.8,0.2),c(0.1,0.9))
@@ -31,17 +31,4 @@ y_plt[z==1] <- NA
 lines(y_plt, col = "red")
 dev.off()
 
-saveRDS(list(z=z,y=y), "data/hmm_example.RDS")
-
-# J <- 100
-# x_seq <- seq(0, 1, length.out = J)
-# 
-# ddir <- function(a, b)
-#   return(MCMCpack::ddirichlet(cbind(a,b), c(5,5)))
-# 
-# ddir_val <- outer(x_seq, x_seq, ddir)
-# contour(x_seq, x_seq, ddir_val)
-# 
-# rdir <- MCMCpack::rdirichlet(1e4, c(1,5))
-# hist(rdir[,1], xlim = c(0,1), breaks = 50)
-# hist(rdir[,2], xlim = c(0,1), breaks = 50)
+saveRDS(list(z=z,y=y), "hmm_example.RDS")
