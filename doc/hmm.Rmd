@@ -1,7 +1,7 @@
 ---
-title: "Tagging Basketball Events with HMM"
+title: "Tagging Basketball Events with HMM in Stan"
 author: "Imad Ali"
-date: "8/5/2019"
+date: "8/18/2019"
 output: 
   html_document:
     toc: true
@@ -24,9 +24,9 @@ rstan_options(auto_write = TRUE)
 
 
 
-This case study shows how we can implement Bayesian Hidden Markov Models (HMMs) in [Stan](https://mc-stan.org/) to extract useful information from basketball player tracking data. Specifically we show how to tag drive events and how to determine defensive assignment.
+This case study shows how we can implement Bayesian Hidden Markov Models (HMMs) in [Stan](https://mc-stan.org/) to extract useful information from basketball player tracking data. Specifically we show how to tag drive events and how to determine defensive assignment. Before diving into basketball data we show how to fit a HMM in Stan using a simple example. This should help build some intution for those who are unfamiliar wit HMMs and will also show how to specify a HMM using Stan.
 
-Before diving into basketball data we show how to fit a HMM in Stan using a simple example. This should help build some intution for those who are unfamiliar wit HMMs and will also show how to specify a HMM using Stan. 
+The code used to build this document is available in the followin GitHub repository: https://github.com/imadmali/bball-hmm.
 
 
 
@@ -76,7 +76,7 @@ $$
 
 This says that the distribution of each observation $y_t$ is normal with location parameter $\mu_{z_t}$ and constant scale. There are two values that $z_t$ can take at each time step which means that there are two values of $\mu$. So we have $\mu_{z_t} \in [\mu_1,\mu_2]$. The model also says that the state variable follows the categorical distribution which is parameterized by $\theta_{z_[t-1]}$. Since $z_t$ can take two values, $\theta_{z_[t-1]}$ also takes two values. Given the properties of the cateogrical distribution $\theta_{z_[t-1]}$ sums to 1. This means that $\boldsymbol{\theta}$ is a $2 \times 2$ matrix of probabilities.
 
-below is a graphical representation of the model.
+A graphical representation of the model is provided below.
 
 <div align='center'>
   <img src="simple_hmm.png" width="600"/>
@@ -102,7 +102,7 @@ In order to estimate the parameters we need define the posterior distribution wh
 
 Below we represent the HMM in Stan (also available in `models/hmm_example.stan`). The `model {}` block specifies the priors and the forward algorithm to determine the most likely state at each point in time, and the `generated quantities {}` block specifies the Viterbi algorithm to enable us to determine the most likely state sequence. This model was adapted from the [Stan User's Guide](https://mc-stan.org/docs/2_18/stan-users-guide/hmms-section.html).
 
-Notice that we have chosen to define $\vec{\psi}$ as `positive_ordered[K] psi` instead of `real psi[K]`. This constraint is applied in order to enforce a strict separation between two $\psi$ values associated with the two states. If we do not do this, and we do not have strict enough priors, the sampling algorithm may struggle to find convergence among the parameter chains (Betancourt 2017). (In some situations strict priors may not be sufficient and an ordering _must_ be enforced.) An example of omitting the constraint specification is provided in `models/hmm_example_bad.stan`.
+Notice that we have chosen to define $\vec{\psi}$ as `positive_ordered[K] psi` instead of `real psi[K]`. This constraint is applied in order to enforce a strict separation between two $\psi$ values associated with the two states. If we don't do this, and we don't have strict enough priors, the sampling algorithm may struggle to find convergence among the parameter chains (Betancourt 2017). (In some situations strict priors may not be sufficient and an ordering _must_ be enforced.) An example of omitting the constraint specification is provided in `models/hmm_example_bad.stan`.
 
 ```{stan eval=FALSE, output.var='hmm_example'}
 data {
@@ -219,7 +219,7 @@ print(hmm_bad_stan$fit, pars = "y_star", include = FALSE, probs = c(0.05,0.95))
 mcmc_trace(as.array(hmm_bad_stan$fit), regex_pars = "^theta\\[|^psi\\[", facet_args = list(ncol = 2))
 ```
 
-Notice how we have `Rhat` values different from 1 and chains that don't mix well; all indicators of bad convergence.
+Notice how we have `Rhat` values different from 1 and the parameter chains that don't mix well; all indicators of bad convergence.
 
 #### Posterior Predictions
 
@@ -290,7 +290,7 @@ For those who are unfamiliar with basketball, a [drive](https://www.youtube.com/
 * The player increases their speed.
 * The player reduces the distance between himself and the basket.
 
-The video below illustrates what a drive event looks like in the player tracking data (see `drive_data.R` for code). This drive possession was attributed to Zach LaVine in the Minnesota Timberwolves v Boston Celtics game on 12/21/2015.
+The video below illustrates what a drive event looks like in the player tracking data (see `drive_data.R` for code). This drive possession was attributed to Zach LaVine in the Minnesota Timberwolves v Boston Celtics [game](https://stats.nba.com/game/0021500411/) on 12/21/2015.
 
 
 <div align='center'>
@@ -312,7 +312,7 @@ Using the player tracking data we can construct the speed and distance metrics a
 </div>
 
 
-It is apparent that the speed metric is pretty noisy. This may be attributed to the fact that time is measured in 25 hertz (1/25th of a second) and that location is determined by a computer vision algorithm and not a tracking chip attached to the player. They are many methods that can be used to smooth the data (e.g. splines). Here we use a basic rolling mean with a window of three time steps. In our example the data is not so noisy that it would affect the performance of our model so the smoothing is mostly for aesthetics and ease of interpretation. If the noise in the series was more extreme then we might want consider implementing a better smoothing method before fitting our model.
+It's apparent that the speed metric is pretty noisy. This may be attributed to the fact that time is measured in 25 hertz (1/25th of a second) and that location is determined by a computer vision algorithm and not a tracking chip attached to the player. They are many methods that can be used to smooth the data (e.g. splines). Here we use a basic rolling mean with a window of three time steps. In our example the data is not so noisy that it would affect the performance of our model so the smoothing is mostly for aesthetics and ease of interpretation. If the noise in the series was more extreme then we might want consider implementing a better smoothing method before fitting our model.
 
 ```{r fig.align='center', fig.height=9, fig.width=6}
 drive_data <- readRDS("../data/evt140_0021500411.RDS")
@@ -494,7 +494,7 @@ $$
 
 A natural choice for priors on $\vec{lambda}$ and each row of $\boldsymbol{\theta}$ would be the Dirichlet distribution. For a single defender, this model determines which one of the five offensive players is being guarded at each time step.
 
-### Fake Data
+### Simulated Data
 
 Before applying the model directly to the player tracking data we should check to see if our model performs appropriately with simulated data. Working in this type of controlled situation will also provide some intuition on what we are trying to model. 
 
@@ -621,26 +621,34 @@ Finally, we can visualize what defensive assignment looks like when inferred fro
 
 It looks like the assignments line up appropriately based on what we are observing. Additionally, we can see some noticable switching and double teaming. Unfortunatley, it is difficult to validate the assingments unless we watch footage of the possession. 
 
+
+
 ## Conclusion
 
-This exposition has provided some guidance on how to model multiple series of data, provided that you believe that there is some sort of hidden state sequence governing the generation of the data that you observe. We've shown how to fit a basic HMM with Stan and how to apply this methodology to basketball player tracking data, specifically within the context of tagging drives and determining defensive assignment. While the work here isn't production ready, there are some interesting ways to extend the work.
 
-One such opportunity is that probabilistically revealing hidden states with HMMs provides humans with assistance in marking up data. Rather than looking at raw footage and tagging events/assignment from scratch, we can use HMMs and some basic prior knowledge to preemptively mark up data which can then be refined by humans.
 
-Once we have this refined data we can go back to the modeling step and use a fully supervised approach (now that we know the hidden states in addition to the observed data) to get a better estimate the parameters in the model. For example, the parameters in our drive model may not be the best at determining when a drive takes place, but with a refined state sequence from human auditing we can re-estimate the parameters so that they are more appropriate.
+This exposition has provided some guidance on how to model several series of data, provided that you believe there is some hidden state sequence governing the generation of the data that you observe. We've shown how to fit a basic HMM with Stan and how to apply this methodology to basketball player tracking data. There are some interesting opportunties for to extend the ou our work.
 
-Additionally, we can pair this modeling approach with other models to get a more comprehensive understanding of what's taking place on the court. Going back to the drive example, it is difficult to infer the type of shot that took place as as result of the drive. Was it a floater, a bank shot, a finger-roll? It's too hard to tell with just the coordinate based player tracking data. If we combine with with computer vision algorithms that may be able to determine the type of shot (based on an existing set of shot types) then we can pair this meta data with the drive event.
+One such opportunity is that revealing hidden states with HMMs can provide humans with assistance when labeling data. Rather than looking at raw footage and tagging events/assignment from scratch, we can use HMMs and some basic prior knowledge to preemptively label data which can be further refined by humans if necessary. With this refined data we can go back to the modeling step and use a fully supervised approach (now that we are certain about the hidden state sequence in addition to the observed data) to get better estimates of the parameters in the model.
+
+For example, after a first pass to infer the state sequence the parameters in our drive model may not be the best at identifying when a drive actually takes place. However, after the state sequence is refined through human auditing we can re-estimate the parameters so that or model is more appropriate.
+
+Additionally, we can pair this modeling approach with other models to get a more comprehensive understanding of what's taking place on the court. Going back to the drive example, it's difficult to infer the type of shot that took place as as result of the drive. Was it a floater, a bank shot, a finger-roll? It's too hard to tell with just the coordinate level player tracking data. However, we could combine the player tracking data with computer vision algorithms that can determine the type of shot from video footage. This meta data can then be paired with the player tracking data to get more complete information about the event that took place.
 
 
 
 ## References
 
+Betancourt M. (2017) https://mc-stan.org/users/documentation/case-studies/identifying_mixture_models.html.  
+
+Franks, A., Miller, A., Bornn, L. & Goldsberry, K. (2015) Characterizing the spatial structure of defensive skill in professional basketball. Version 3. https://arxiv.org/abs/1405.0231.  
+
+Keshri, S., Oh, M., Zhang, S. & Iyengar, G. (2017) [Automatic Event Detection in Basketball](http://nessis.org/nessis17/Keshri.pdf). Selected presentations from the 2017 NESSIS. http://nessis.org/nessis17.html.  
+
+Keshri, S., Oh, M., Zhang, S. & Iyengar, G. (2019) [Automatic event detection in basketball using HMM with energy based defensive assignment](https://www.degruyter.com/view/j/jqas.2019.15.issue-2/jqas-2017-0126/jqas-2017-0126.xml). _Journal of Quantitiative Analysis in Sports_. 15(2), 141–153.  
+
+Stan Development Team (2019) Stan Modeling Language User's Guide. Version 2.20. http://mc-stan.org.  
+
+Stan Development Team (2019) Stan Language Reference Manual. Version 2.20. http://mc-stan.org.  
 
 
-* NESSIS paper
-* alex franks paper
-* rstan reference
-
-Stan Users Guide (2019) https://mc-stan.org/docs/2_18/stan-users-guide/hmms-section.html
-
-Betancourt M. (2017) https://mc-stan.org/users/documentation/case-studies/identifying_mixture_models.html.
