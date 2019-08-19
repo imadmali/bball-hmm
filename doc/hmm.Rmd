@@ -623,25 +623,23 @@ It looks like the assignments line up appropriately based on what we are observi
 
 ## Conclusion
 
-We've shown how to fit a basic HMM with Stan and how to apply this methodology to basketball player tracking data. 
+This exposition has provided some guidance on how to model multiple series of data, provided that you believe that there is some sort of hidden state sequence governing the generation of the data that you observe. We've shown how to fit a basic HMM with Stan and how to apply this methodology to basketball player tracking data, specifically within the context of tagging drives and determining defensive assignment. While the work here isn't production ready, there are some interesting ways to extend the work.
 
-Talk about how this can aid human users marking up data.
-Talk about how labeling the data would make the HMM parameters consistent with when the drive actually occurs.
-Talk about pairing HMM with computer vision algorithms to apply meta data to the drive event regarding the type of shot (floater, bank, finger-roll, etc).
+One such opportunity is that probabilistically revealing hidden states with HMMs provides humans with assistance in marking up data. Rather than looking at raw footage and tagging events/assignment from scratch, we can use HMMs and some basic prior knowledge to preemptively mark up data which can then be refined by humans.
+
+Once we have this refined data we can go back to the modeling step and use a fully supervised approach (now that we know the hidden states in addition to the observed data) to get a better estimate the parameters in the model. For example, the parameters in our drive model may not be the best at determining when a drive takes place, but with a refined state sequence from human auditing we can re-estimate the parameters so that they are more appropriate.
+
+Additionally, we can pair this modeling approach with other models to get a more comprehensive understanding of what's taking place on the court. Going back to the drive example, it is difficult to infer the type of shot that took place as as result of the drive. Was it a floater, a bank shot, a finger-roll? It's too hard to tell with just the coordinate based player tracking data. If we combine with with computer vision algorithms that may be able to determine the type of shot (based on an existing set of shot types) then we can pair this meta data with the drive event.
+
+
 
 ## References
 
-* HMM wiki
-* forward algo wiki
-* Viterbi algo wiki
+
+
 * NESSIS paper
 * alex franks paper
-
-Hidden Markov Models () https://en.wikipedia.org/wiki/Hidden_Markov_model
-
-Forward Algorithm () https://en.wikipedia.org/wiki/Forward_algorithm
-
-Viterbi Algorithm () https://en.wikipedia.org/wiki/Viterbi_algorithm
+* rstan reference
 
 Stan Users Guide (2019) https://mc-stan.org/docs/2_18/stan-users-guide/hmms-section.html
 
