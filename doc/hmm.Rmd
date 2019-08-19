@@ -639,6 +639,8 @@ Additionally, we can pair this modeling approach with other models to get a more
 
 ## References
 
+
+
 Betancourt M. (2017) https://mc-stan.org/users/documentation/case-studies/identifying_mixture_models.html.  
 
 Franks, A., Miller, A., Bornn, L. & Goldsberry, K. (2015) Characterizing the spatial structure of defensive skill in professional basketball. Version 3. https://arxiv.org/abs/1405.0231.  
@@ -650,5 +652,25 @@ Keshri, S., Oh, M., Zhang, S. & Iyengar, G. (2019) [Automatic event detection in
 Stan Development Team (2019) Stan Modeling Language User's Guide. Version 2.20. http://mc-stan.org.  
 
 Stan Development Team (2019) Stan Language Reference Manual. Version 2.20. http://mc-stan.org.  
+
+
+
+## Computing Environment
+
+
+
+```{r}
+devtools::session_info("rstan")
+```
+
+
+
+## Licenses
+
+
+
+Code (c) 2019 Imad Ali, BSD 3  
+
+Text (c) 2019 Imad Ali, licensed under CC-BY-NC 4.0.  
 
 
