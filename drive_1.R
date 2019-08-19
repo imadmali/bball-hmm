@@ -24,8 +24,8 @@ stan_data <- list(N = length(lavine_speed_smooth),
                   u = log(1/lavine_speed_smooth),
                   v = log(lavine_dist),
                   alpha = rbind(c(4,2),c(2,4)),
-                  tau = 1,
-                  rho = 1)
+                  tau = 0.1,
+                  rho = 0.1)
 
 fit <- stan("models/drive_1.stan", data = stan_data, chains = 4, iter = 1e3)
 saveRDS(list(fit = fit, data = stan_data), "results/drive_1.RDS")

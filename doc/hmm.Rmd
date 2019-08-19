@@ -24,9 +24,9 @@ rstan_options(auto_write = TRUE)
 
 
 
-This case study shows how we can use Bayesian Hidden Markov Models (HMMs) in Stan to extract useful information from basketball player tracking data. Specifically we show how to tag drive events and how to determine defensive assignment. The approach taken here is semisupervised since we know the outcome variables, but do not know the hidden states.
+This case study shows how we can implement Bayesian Hidden Markov Models (HMMs) in [Stan](https://mc-stan.org/) to extract useful information from basketball player tracking data. Specifically we show how to tag drive events and how to determine defensive assignment.
 
-Before diving into basketball data we show how to fit a HMM in Stan using a simple example. This should help build some intution for those who are unfamiliar wit HMMs and will also show how to specify a HMM using the Stan probabilistic programming language. 
+Before diving into basketball data we show how to fit a HMM in Stan using a simple example. This should help build some intution for those who are unfamiliar wit HMMs and will also show how to specify a HMM using Stan. 
 
 
 
@@ -36,10 +36,10 @@ Before diving into basketball data we show how to fit a HMM in Stan using a simp
 
 HMMs enable you to model a series of observed values. Each observed value maps to a state value, so you also have a series of states that corresponds to the series of observed values. The state series exhibits the Markov property so the value of the state at time $t$ only depends on the value of the state at time $t-1$. Often the states are hidden so the goal of the model is to,
 
-1. Estimate the parameters that allow you to transition from one state to the next and, given the state, the parameters involved in generating the observation.
+1. Estimate the parameters that allow you to transition from one state to the next and (given the state) the parameters involved in generating the observation.
 2. Predict the most likely state sequence based on the observed data and the parameters estimated in (1).
 
-The plot below outlines a HMM with one sequence of observed outcomes generated from the normal distribution and two states. At each time step we are in one of the two states. Each of the states corresponds to a location parameter. The observed value is generated depending on which one of two location parameters is selected, which in turn depends on which state you are in. In more complicated data you could have multiple observations and many more states at each time step.
+The plot below outlines a HMM that we simulated. The model involves one sequence of observed outcomes generated from the normal distribution and two states. At each time step we are in one of the two states. Each of the states corresponds to a location parameter from the normal distribution. So the observed value is generated depending on which one of two location parameters is selected, which in turn depends on which state you are in. In more complicated data you could have multiple observations and many more states at each time step.
 
 You can see how state 1 corresponds to smaller values of the outcome while state 2 corresponds to relatively higher values of the outcome. In most real-word situations you do not know the state value at each time step because it is hidden. So in order to fit the model and infer the state sequence you first need to make an assumption as to how many possible states there might be at each time step.
 
@@ -64,7 +64,7 @@ lines(y_plt, lwd = 3)
 legend("bottomright", c("State 1","State 2"), lty = c(1,1), lwd = c(1,3), cex = 0.8)
 ```
 
-Given that, at each time step $t$, we make the assumption that there are two states in the model $z_t \in [1,2]$ the full generative model can be defined,
+Suppose we don't know how many states there are at each time step $t$, but we assume that there are two states $z_t \in [1,2]$. The full generative model can be defined as,
 
 $$
 \begin{align*}
@@ -74,33 +74,35 @@ $$
 \end{align*}
 $$
 
+This says that the distribution of each observation $y_t$ is normal with location parameter $\mu_{z_t}$ and constant scale. There are two values that $z_t$ can take at each time step which means that there are two values of $\mu$. So we have $\mu_{z_t} \in [\mu_1,\mu_2]$. The model also says that the state variable follows the categorical distribution which is parameterized by $\theta_{z_[t-1]}$. Since $z_t$ can take two values, $\theta_{z_[t-1]}$ also takes two values. Given the properties of the cateogrical distribution $\theta_{z_[t-1]}$ sums to 1. This means that $\boldsymbol{\theta}$ is a $2 \times 2$ matrix of probabilities.
+
+below is a graphical representation of the model.
+
+<div align='center'>
+  <img src="simple_hmm.png" width="600"/>
+</div>
+
 The parameters that we want to estimate in this model are the transition probabilities ($\boldsymbol{\theta}$) and the parameters associated with the emission probabilities ($\mu_1$,$\mu_2$).
 
 * **Transition probabilities** govern how likely it is to move from one state to another or to stay within the same state. This is represented as a matrix.
 * **Emission probabilities** govern how likely the outcome was generated by that state.
 
-We can interpret an element in the transition matrix $\boldsymbol{theta}$ as the probability of going from the row state to the column state from time $t-1$ to time $t$. So the diagonal elements give the probability of staying in the same state, and the off-diagonal elements give the probability of transitioning from one state to the next. Note that each row of the matrix sums to 1. Given our example we have,
+We can interpret an element in the transition matrix $\boldsymbol{theta}$ as the probability of going from the row state to the column state from time $t-1$ to time $t$. So the diagonal elements give the probability of staying in the same state, and the off-diagonal elements give the probability of transitioning from one state to the next. Continuting with our example we have,
 
 * $\theta_{1,1}$: the probability of going from state $k=1$ to state $k=1$.
 * $\theta_{2,2}$: the probability of going from state $k=2$ to state $k=2$.
 * $\theta_{1,2}$: the probability of going from state $k=1$ to state $k=2$.
 * $\theta_{2,1}$: the probability of going from state $k=2$ to state $k=1$.
 
-Since the data in this example are normally distributed the emission probabilities come from the normal distribution. The emission probabilities depend on the location and scale parameter associated with each state (i.e. emission parameters). In our model we assume the scale parameter is known and only have to estimate the location parameters $\mu_1$ and $\mu_2$ for each state.
+Since the data in this example are normally distributed the emission probabilities come from the normal distribution. The emission probabilities depend on the location and scale parameter associated with each state (i.e. the emission parameters). In our model we've assume the scale parameter is known and only have to estimate the location parameters $\mu_1$ and $\mu_2$ for each state.
 
-below is a graphical representation of the above model
-
-<div align='center'>
-  <img src="simple_hmm.png" width="600"/>
-</div>
-
-In order to estimate the parameters we need define the posterior distribution which requires us to specify the likelihood of the data and the priors. The likelihood is defined by the probability of observing that particular sequence of outcome variables. The priors are defined on the transition matrix and on the emission parameters. Since each row of the transition matrix sums to 1, a natural prior distribution choice is to define the Dirichlet distribution on each row of the matrix. Using the likelihood and the priors we can estimate the transition matrix and the emission parameters using the [forward algorithm](https://en.wikipedia.org/wiki/Forward_algorithm). Once we estimate the parameters we can determine the most probable state sequence than generated the sequence of observations. This can be acheived with the [Viterbi algorithm](https://en.wikipedia.org/wiki/Viterbi_algorithm).
+In order to estimate the parameters we need define the posterior distribution which requires us to specify the likelihood of the data and the priors. The likelihood is defined by the probability of observing that particular sequence of outcome variables. The priors are defined on the transition matrix and on the emission parameters. Since each row of the transition matrix sums to 1, a natural prior distribution choice is to define the Dirichlet distribution on each row of the matrix. Using the likelihood and the priors we can estimate the transition matrix and the emission parameters using the [forward algorithm](https://en.wikipedia.org/wiki/Forward_algorithm). Once we estimate the parameters we can determine the most probable state sequence that generated the sequence of observations. This can be acheived with the [Viterbi algorithm](https://en.wikipedia.org/wiki/Viterbi_algorithm). 
 
 ### Specifying the Model
 
-Below we represent the HMM in Stan (also available in `models/hmm_example.stan`). The `model {}` block specifies the priors and the forward algorithm to determine the most likely state at each point in time, and the `generated quantities {}` block specifies the Viterbi algorithm to enable us to determine the most likely state sequence. This model was adapted from the [Stan User's Guide](https://mc-stan.org/docs/2_19/stan-users-guide/).
+Below we represent the HMM in Stan (also available in `models/hmm_example.stan`). The `model {}` block specifies the priors and the forward algorithm to determine the most likely state at each point in time, and the `generated quantities {}` block specifies the Viterbi algorithm to enable us to determine the most likely state sequence. This model was adapted from the [Stan User's Guide](https://mc-stan.org/docs/2_18/stan-users-guide/hmms-section.html).
 
-Notice that we have chosen to define $\vec{\psi}$ as `positive_ordered[K] psi` instead of `real psi[K]`. This constraint is applied in order to enforce a strict separation between two $\psi$ values associated with the two states. If we do not do this, and we do not have strict enough priors, then the sampling algorithm will struggle to find convergence among the parameter chains. An example of this is provided in `models/hmm_example_bad.stan`. (In some situations strict priors may not be sufficient and an ordering _must_ be enforced.)
+Notice that we have chosen to define $\vec{\psi}$ as `positive_ordered[K] psi` instead of `real psi[K]`. This constraint is applied in order to enforce a strict separation between two $\psi$ values associated with the two states. If we do not do this, and we do not have strict enough priors, the sampling algorithm may struggle to find convergence among the parameter chains (Betancourt 2017). (In some situations strict priors may not be sufficient and an ordering _must_ be enforced.) An example of omitting the constraint specification is provided in `models/hmm_example_bad.stan`.
 
 ```{stan eval=FALSE, output.var='hmm_example'}
 data {
@@ -170,9 +172,10 @@ generated quantities {
 
 ### Fitting the Model
 
-Now we can fit the model to the data above in order to estimate the paramters `theta` and `mu` along with the hidden state sequence `y_star`.
+We fit the model to the data provided above in order to estimate the paramters `theta` and `mu` along with the hidden state sequence `y_star`.
 
 ```{r results='hide'}
+# code available in hmm_example.R
 stan_data <- list(N = length(hmm_data$y),
                   K = 2,
                   y = hmm_data$y)
@@ -183,29 +186,40 @@ hmm_fit <- stan("../models/hmm_example.stan", data = stan_data, iter = 1e3, chai
 
 The post estimation steps that we take to validate are,
 
-1. Diagnostics - Make sure that each parameter sample converged. This can be evaluated by examining the traceplots and the R-hat values for each parameter.
-2. Predictions - Specifically we perform a posterior predictive check. Using the estimated parameters and the predicted state sequence we can predict multiple output sequences and see if they line up with the observed output sequence. Additionally, since we know the true state values, we can check to make sure the predicted state values line up the true state values.
+1. **Diagnostics**: Make sure that each parameter sample converged. This can be evaluated by examining the traceplots and the R-hat values for each parameter.
+2. **Predictions**: Specifically we perform a **posterior predictive check**. Using the estimated parameters and the predicted state sequence we can predict multiple output sequences and see if they line up with the observed output sequence. Additionally, since we know the true state values, we can check to make sure the predicted state values line up the true state values.
+
+We go through these steps below.
 
 #### Diagnostics
 
-For the transition probabilities $\boldsymbol\theta{}$ and the parameters associated with the emission probabilities $\vec{\psi}$ we have the following parameter estimates.
+For the transition probabilities $\boldsymbol\theta{}$ and the parameters associated with the emission probabilities $\vec{\psi}$ we have the following parameter estimates. 
 
 ```{r}
 print(hmm_fit, pars = "y_star", include = FALSE, probs = c(0.05,0.95))
 ```
 
-With regards to traceplots to monitor convergence we have the following. There is evidence of good mixing between the parameter chains.
+With regards to traceplots to monitor convergence of chains we have the following.
 
 ```{r fig.align='center', fig.height=5, fig.width=10}
 mcmc_trace(as.array(hmm_fit), regex_pars = "^theta\\[|^psi\\[", facet_args = list(nrow = 2))
 ```
 
+With `Rhat` values close to 1 and evidence of good mixing between the parameter chains we can conclude that our parameter estimates converged. 
+
 In the situation where priors are defined but an ordering is not enforced the lack of parameter convergence looks like the following (see `hmm_example_bad_fit.R` for code).
 
-```{r fig.align='center', fig.height=5, fig.width=10}
+```{r}
+# code available in hmm_example_bad.R
 hmm_bad_stan <- readRDS("../results/hmm_example_bad.RDS")
+print(hmm_bad_stan$fit, pars = "y_star", include = FALSE, probs = c(0.05,0.95))
+```
+
+```{r fig.align='center', fig.height=5, fig.width=10}
 mcmc_trace(as.array(hmm_bad_stan$fit), regex_pars = "^theta\\[|^psi\\[", facet_args = list(ncol = 2))
 ```
+
+Notice how we have `Rhat` values different from 1 and chains that don't mix well; all indicators of bad convergence.
 
 #### Posterior Predictions
 
@@ -263,7 +277,7 @@ lines(y_plt, lwd = 3)
 legend("bottomright", c("State 1","State 2"), lty = c(1,1), lwd = c(1,3), cex = 0.8)
 ```
 
-We can now adapt this methodology to identify a drive and defensive assignment in basketball player tracking data.
+We can now adapt the methodology discsussed in this section to identify a drive and defensive assignment in basketball player tracking data.
 
 
 
@@ -271,7 +285,7 @@ We can now adapt this methodology to identify a drive and defensive assignment i
 
 
 
-For those who are unfamiliar with basketball, a [drive](https://www.youtube.com/watch?v=SAp95x3iCCY) occurs when a player dribbles the ball towards the hoop for a shot attempt (often a layup). We can translate a drive into two types of events that are happening simultaneously over time until the shot,
+For those who are unfamiliar with basketball, a [drive](https://www.youtube.com/watch?v=SAp95x3iCCY) occurs when a player dribbles the ball towards the hoop for a shot attempt (often a layup). We can translate a drive into two types of events that are happening simultaneously over time until the shot attempt,
 
 * The player increases their speed.
 * The player reduces the distance between himself and the basket.
@@ -288,7 +302,7 @@ The video below illustrates what a drive event looks like in the player tracking
 
 ### Pre-process Data
 
-Using the player tracking data we can construct the speed and distance metrics associated with LaVine's drive event. We define speed as distance over time and use Euclidean distance to determine the player's distance from the hoop at each time step. Below we show these metrics along with the player tracking data (see `drive_data.R` for code). Notice how he decreases his distance from the basket as he increases his speed as he drives to the hoop.
+Using the player tracking data we can construct the speed and distance metrics associated with LaVine's drive event. We define speed as distance over time and use Euclidean distance to determine the player's distance from the hoop at each time step. Below we show these metrics along with the player tracking data (see `data/pt_data_evt140_drive.R` for code). Notice how LaVine decreases his distance from the basket and he increases his speed as he drives to the hoop.
 
 
 <div align='center'>
@@ -298,7 +312,7 @@ Using the player tracking data we can construct the speed and distance metrics a
 </div>
 
 
-It is apparent that the speed metric is pretty noisy. This may be attributed to the fact that time is measured in 25 hertz (25ths of a second) and that location is determined by a computer vision algorithm and not a tracking chip attached to the player. They are many methods that can be used to smooth the data (e.g. splines). Here we use a basic rolling mean with a window of three time steps. In our example the data is not so noisy that it would affect the performance of our model so the smoothing is mostly for aesthetics and ease of interpretation. If the variance in the series was more extreme then we might want consider implementing a better smoothing method before fitting our model.
+It is apparent that the speed metric is pretty noisy. This may be attributed to the fact that time is measured in 25 hertz (1/25th of a second) and that location is determined by a computer vision algorithm and not a tracking chip attached to the player. They are many methods that can be used to smooth the data (e.g. splines). Here we use a basic rolling mean with a window of three time steps. In our example the data is not so noisy that it would affect the performance of our model so the smoothing is mostly for aesthetics and ease of interpretation. If the noise in the series was more extreme then we might want consider implementing a better smoothing method before fitting our model.
 
 ```{r fig.align='center', fig.height=9, fig.width=6}
 drive_data <- readRDS("../data/evt140_0021500411.RDS")
@@ -324,40 +338,41 @@ Now that we have the transformed the data appropriately we can specify and fit t
 
 ### Specifying and Fitting the Model
 
-Here our HMM needs to infer two hidden states: drive and none, and we have to model both the speed and distance observed sequences. An existing approach models 1/speed in order to get the speed and distance sequences to trend in the same way between the drive and non-drive state (Keshri et al 2017). In this case a drive would be defined by,
+Here our HMM needs to infer two hidden states: drive and none, and we have to model both the speed and distance observed sequences. One approach would be to model 1/speed in order to get the speed and distance sequences to trend in the same direction in the drive and non-drive state (Keshri et al 2017). In this case a drive would be defined by,
 
-* The player reduces their 1/speed.
+* The player reduces their 1/speed (equivalent to increasing speed).
 * The player reduces the distance between himself and the basket.
 
-If the data is transformed in this way, a natural modeling approach for the emission probabilities would be to use the exponential distribution function. Unfortunately this poses two issues:
+If the data are transformed in this way a natural modeling approach for the emission probabilities would be to use the exponential distribution function. Unfortunately this poses two issues:
 
-1. **Scale of the data**: Both the distance and the speed metric are on very different scales. It would make sense to take the log of these data to normalize them but unfortunatley this is inconsistent with the support of the exponential distribution being greater than or equal to 0.
-2. **Computationally unstable**: The 1/speed transformation contains values that are mostly close to 0. This makes it difficult for distributions that have most of their density around 0, such as the exponential distribution, to model the data. The reason being that it will be difficult to discriminate between the drive and none states, since the 1/speed data will assign high probabilities to both states due to most of the density being around 0.
+1. **Scale of the data**: Both the distance and the speed metric are on very different scales. It would make sense to take the log of these data to normalize them but unfortunatley this is infeasible since the support of the exponential distribution must be greater than or equal to 0.
+2. **Computationally unstable**: The 1/speed transformation contains values that are mostly close to 0. This makes it difficult to use distributions that have most of their density around 0, such as the exponential distribution. The reason being that it will be difficult to discriminate between the "drive" and "none" states, since modeling 1/speed with the exponential distribution will attribute high probabilities to both states.
 
-While it is mathematically more tractable to use the exponential distribution, we argue that such a choice to model the data generation process will be computationally unstable. Instead, we opt to use the normal distribution on both the 1/speed and distance metrics. This will enable us to model the data on the log scale. 
+While it is mathematically more tractable to use the exponential distribution, we argue that such a choice to model the data generation process will be computationally unstable. Instead, we opt to use the normal distribution on both the 1/speed and distance metrics, enabling us to model the data on the log scale. 
 
 With the normal distributions defined over the observed data, our HMM is defined as follows,
 
 $$
 \begin{align*}
-u_t &\sim \mathcal{N}(\psi_{z_t} | tau) \\
-v_t &\sim \mathcal{N}(\lambda_{z_t} | rho) \\
+u_t &\sim \mathcal{N}(\phi_{z_t} | \tau) \\
+v_t &\sim \mathcal{N}(\lambda_{z_t} | \rho) \\
 z_t &\sim \mathcal{cateogrical}(\theta_{z_{[t-1]}}) \\
 \theta_{z_t} &\sim \mathcal{Dir}(\alpha_{z_t}) \\
 \end{align*}
 $$
 
-where $z_t \in [1,2]$, $\tau=\rho=1$, and $\alpha = [[4,2],[2,4]]$.
+where $z_t \in [1,2]$, $\tau=\rho=0.1$, and $\alpha = [[4,2],[2,4]]$.
 
-Below is a illustrative representation of the process that we are trying to model. 
+Below is a graphical representation of the process that we are trying to model. 
 
 <div align='center'>
   <img src="drive_hmm.png" width="600"/>
 </div>
 
-Finally, we fit the model to LaVine's data for the single drive event (see `drive_1.R` for code). We provide the model fit diagnostics below.
+Now we can fit the model to LaVine's data for the single drive possession. We provide the model results and diagnostics below.
 
 ```{r}
+# code available in drive_1.R
 drive_stan <- readRDS("../results/drive_1.RDS")
 print(drive_stan$fit, pars = 'y_star', include = FALSE, probs = c(0.05,0.95))
 ```
@@ -370,28 +385,52 @@ For comparison we implemented the exponential distribution version of the model 
 
 ### Post-processing Data
 
-We post-process the state predictions and layer them on top of the original distance/speed plots to see if the predictions lined up with our logic.
+We post-process the predicted state values and layer them on top of the original distance/speed plots to see if the predictions lined up with our logic. We also show the posterior predictions of the output values given the predicted states and estimated parameter values. While the posterior predictions don't track the variation in the data, they do line up with the states appropriately.
 
 ```{r fig.align='center', fig.height=9, fig.width=6}
 
 samples <- as.matrix(drive_stan$fit)
-y_star <- colMeans(samples[,grep("^y_star", colnames(samples))])
+phi <- samples[,grep("^phi", colnames(samples))]
+lambda <- samples[,grep("^lambda", colnames(samples))]
+y_star <- samples[,grep("^y_star", colnames(samples))]
+
+phi_hat <- list()
+lambda_hat <- list()
+for (i in 1:nrow(samples)) {
+  phi_seq <- sapply(y_star[i,], function(x){phi[i,x]})
+  lambda_seq <- sapply(y_star[i,], function(x){lambda[i,x]})
+  phi_hat[[i]] <- rnorm(length(phi_seq), phi_seq, 0.1)
+  lambda_hat[[i]] <- rnorm(length(lambda_seq), lambda_seq, 0.1)
+}
+
+indxs <- sample(length(samples), 100, replace = FALSE)
 
 par(mfrow = c(3,1))
-plot(drive_data$game$lavine_dist, type = "l",
-     main = "Distance from Hoop",
+# dist
+plot(drive_stan$data$v, type = "n",
+     main = "Distance from Hoop (log scale)",
      xlab = "Time (25hz)", ylab = "Distance from Hoop")
-plot(lavine_speed_smooth, type = "l",
+for (i in 1:length(indxs))
+  lines(lambda_hat[[i]], col = "#ff668890")
+lines(drive_stan$data$v, lwd = 2)
+legend("topright", c("Observed","Predicted"), col = c("#000000","#ff668890"), lty = c(1,1), lwd = c(2,1), cex = 0.8)
+# speed
+plot(drive_stan$data$u, type = "n",
      main = "Smooth Speed",
-     xlab = "Time (25hz)", ylab = "Speed")
-plot(round(y_star), type = "l", pch = 1, cex = 0.5,
+     xlab = "Time (25hz)", ylab = "Speed (log scale)")
+for (i in 1:length(indxs))
+  lines(phi_hat[[i]], col = "#ff668890")
+lines(drive_stan$data$u, lwd = 2)
+legend("topright", c("Observed","Predicted"), col = c("#000000","#ff668890"), lty = c(1,1), lwd = c(2,1), cex = 0.8)
+# states
+plot(round(colMeans(y_star)), type = "l", pch = 1, cex = 0.5,
      main = "Hidden States",
      ylab = "State", xlab = "Time (25hz)",
      ylim = c(0.5, 2.5), yaxt = "n")
     axis(2, c(1,2), c("Drive", "None"), las = 2)
 ```
 
-We can also layer the predicted latent states on top of the previous video for a more comprehensive view of how the state sequence behaves in relation to what is happening on the court. 
+We can also layer the predicted latent states on top of the previous video for a more comprehensive view of how the state sequence behaves based on what is happening on the court. 
 
 
 <div align='center'>
@@ -401,7 +440,7 @@ We can also layer the predicted latent states on top of the previous video for a
 </div>
 
 
-It looks like things line up nicely. The drive event gets triggered only when the player dramatically reduces their distance from the basket and increases their speed over time and
+It looks like things line up nicely. The drive event gets triggered only when the player dramatically reduces their distance from the basket and increases their speed over time. 
 
 
 
@@ -434,13 +473,14 @@ $$
 \vec{\mu}_{z_t} = \vec{o}_{z_t}\lambda_{1} + \vec{h}\lambda_{3} + \vec{b}_t\lambda_{2} \\
 $$
 
-where, $z_t \in [1,2,\ldots,5]$ represents the hidden states (one of the 5 offensive player). $\vec{d}_t$ denotes the defensive player's coordinates (in this example we only consider one defender). $\vec{o}_{z_t}$ is the position of the offensive player associated with state $z_t$, $\vec{h}$ is the position of the hoop, and $\vec{b}_t$ is the position of the ball. Because $\vec{\mu}_{k}$ is a convex combination we also have the following constraint,
+The index $z_t \in [1,2,\ldots,5]$ represents the hidden states (one of the 5 offensive player). $\vec{d}_t$ denotes the defensive player's coordinates (in this example we only consider one defender). $\vec{o}_{z_t}$ is the position of the offensive player associated with state $z_t$, $\vec{h}$ is the position of the hoop, and $\vec{b}_t$ is the position of the ball. Because $\vec{\mu}_{k}$ is a convex combination we also have the following constraint,
 
 $$
 \lambda_{1} + \lambda_{2} + \lambda_{3} = 1 \\
 \Leftrightarrow \\
 \vec{\lambda} \mathbf{1} = 1
 $$
+This specifies that $\lambda$ is a simplex (the sum of all the elements equals 1).
 
 Putting the model together with the state transition matrix and prior distributions gives,
 
@@ -456,11 +496,12 @@ A natural choice for priors on $\vec{lambda}$ and each row of $\boldsymbol{\thet
 
 ### Fake Data
 
-Before applying the model directly to the player tracking data we should check to see if our model performs appropriately with simulated data. Working in this type of controlled situation will also provide some intuition on what the model is doing. 
+Before applying the model directly to the player tracking data we should check to see if our model performs appropriately with simulated data. Working in this type of controlled situation will also provide some intuition on what we are trying to model. 
 
-The code in `data/defense_example_data.R` simulates an overly simplified basketball possession. For 20 time steps we sample a fixed position of five offensive players (`o1` to `o5`) and the ball. (We do this with trivial noise to mimic the noisiness of the player tracking data.) We include the hoop location as a single coordinate as the position is fixed over time. With all these pieces in place we trace the path of a single defender in an upside-down parabola shape around the hoop.
+The figure below illustrates an overly simplified basketball possession. For 20 time steps we sample a fixed position of five offensive players (`o1` to `o5`) and the ball. (We do this with trivial noise to mimic the noisiness of the player tracking data.) We include the hoop location as a single coordinate as the position is fixed over time. With all these pieces in place we trace the path of a single defender in an upside-down parabola shape around the hoop.
 
 ```{r fig.align='center', fig.width=6, fig.height=6}
+# code available in data/defense_example_data.R
 defense_example <- readRDS("../data/defense_example.RDS") 
 list2env(defense_example, .GlobalEnv)
 # plot
@@ -468,18 +509,18 @@ plt_defense_example(defense_example, main = "Defense Example")
 points(d[,1], d[,2], col = "#ff6688", pch = 0)
 ```
 
-Since the ball and hoop are fixed, the convex combination only varies based the offensive player under consideration. Intuitively we want the model to say that the defender is guarding a particular offensive player if the defender is closest to the convex combination generated by that offensive player.
+Since the ball and hoop are fixed, the convex combination only varies based the offensive player under consideration. Intuitively we want the model to say that the defender is guarding a particular offensive player if the defender is closest to the convex combination generated by that offensive player. In order to do so, we need to estimate what the convex combination will be.
 
-Below we fit the model to the simulated data assuming that the convex combination parameters are known and fixed to $\vec{\lambda} = [1/3,1/3,1/3]$. This approach strongly biases the model to prior knowledge about where defenders are situated when guarding offensive players. Specifically it states that locations (hoop, ball, and offensive player) are equally weighted so that the convex combination (i.e. optimal defensive player positioning) is not skewed towards certain locations. For example if we specified $\vec{\lambda} = [0.4,0.4,0.2]$ then the convex combination will be closer to the offensive player and the hoop, and farther away from the ball. A defender who is closer to this convex combination will be assigned to the offensive player over a defender who is closer to the convex combination defined by $\vec{\lambda} = [1/3,1/3,1/3]$.
+We fit the model to the simulated data assuming that the convex combination parameters are known and fixed to $\vec{\lambda} = [1/3,1/3,1/3]$. This approach strongly biases the model to prior knowledge about where defenders are situated when guarding offensive players. Specifically it states that locations (hoop, ball, and offensive player) are equally weighted so that the convex combination (i.e. optimal defensive player positioning) is not skewed towards certain locations. For example if we specified $\vec{\lambda} = [0.4,0.4,0.2]$ then the convex combination will be closer to the offensive player and the hoop, and farther away from the ball. In this situation, a defender who is closer to this convex combination will be assigned to the offensive player over a defender who is closer to the convex combination defined by $\vec{\lambda} = [1/3,1/3,1/3]$.
 
 ```{r}
-# fixing convex combination parameter
 # code available in defense_0a.R
+# fixing convex combination parameter
 defense_0a_stan <- readRDS("../results/defense_0a.RDS")
 print(defense_0a_stan$fit, pars = "y_star", include = FALSE, probs = c(0.05,0.95))
 ```
 
-The model below is similar to the model above except that it assumes $\vec{\lambda}$ is not known and has to be estimated from the data. We can still incorporate prior information about defensive positioning by applying the appropriate prior distribution on $\vec{\lambda}$. This will be less strict compared to declaring $\vec{\lambda}$ explicitly. Here we use the following Dirichlet prior, $\vec{\lambda} \sim \mathcal{Dir}(3,3,3)$. More importantly, this approach lets us learn about $\vec{\lambda}$ from the data, while accounting for our prior knowledge. This means that we can compute which convex combination, and therefore positioning, defenders tend to favor (i.e. to they tend to be closer to the ball, hoop, or offensive player).
+The model below is similar to the model above except that it assumes $\vec{\lambda}$ is not known and has to be estimated from the data. We can still incorporate prior information about defensive positioning by applying the appropriate prior distribution on $\vec{\lambda}$. This will be less strict compared to declaring $\vec{\lambda}$ explicitly. Here we use the following Dirichlet prior, $\vec{\lambda} \sim \mathcal{Dir}(3,3,3)$. More importantly, this approach lets us learn about $\vec{\lambda}$ from the data, while accounting for our prior knowledge. More importantly, this gives us insight into the type of positioning defenders favor within the convex combination.
 
 ```{r}
 # priors on convex combination parameter
@@ -488,7 +529,7 @@ defense_0b_stan <- readRDS("../results/defense_0b.RDS")
 print(defense_0b_stan$fit, pars = "y_star", include = FALSE, probs = c(0.05,0.95))
 ```
 
-For each model we plot the states associated with each position for the defender (these correspond to the offensive player numbers). Additionally, we plot a convex combination $\mu_{z_1}$ for each offensive player. You can see how defensive assignment is related to how close the defender is to $\mu_k$. In this example the difference between fixing and estimating $\vec{\lambda}$ is apparent. When we estimate $\vec{\lambda}$ the defender favors positioning themselves closer to the offensive player and hoop, and father away from the ball. 
+For each model we plot the states associated with each position for the defender (these correspond to the offensive player numbers). Additionally, we plot a convex combination $\mu_{z_[t=1]}$ for each offensive player. You can see how defensive assignment is related to how close the defender is to the convex combination. In this example the difference between fixing and estimating $\vec{\lambda}$ is apparent. When we estimate $\vec{\lambda}$ the defender favors positioning themselves closer to the offensive player and hoop, and father away from the ball. 
 
 ```{r fig.align='center', fig.width=12, fig.height=6}
 samples_0a <- as.matrix(defense_0a_stan$fit)
@@ -540,9 +581,9 @@ text(mu_0b$mu5[1], mu_0b$mu5[2], expression(mu[5]), cex = 0.8)
 
 ### Player Tracking Data
 
-Now that we are confident with our model we can apply it to the player tracking data. We select a different event from the previous section so that there is more movement among players on the court. This possession still has the Minnesota Timberwolves are the offensive team and the Boston Celtics are the defensive team.
+Now that we are confident with our model we can apply it to the player tracking data. We select a different event from the previous were there is more movement among players on the court. This possession still has the Minnesota Timberwolves as the offensive team and the Boston Celtics are the defensive team.
 
-So far the models in this section have shown how to infer defensive assignment for only one defender. In order to apply this to possesion level player tracking data we need to determine defensive assignment for each of the 5 defenders. We implement this in Stan by adding an extra dimension $I=5$ to the observed data and wrap the forward algorithm and the Viterbi algorithm in a loop to determine defensive assignment for each of the 5 defenders. Now the dimensions of $d$ are (number of defenders, number of states (offenders), number of time steps, number of coordinates (2)), which translates to (5,5,N,2) where N is defined by the length of the possession.
+So far the models in this section have shown how to infer defensive assignment for only one defender. In order to apply this to event level player tracking data we need to determine defensive assignment for each of the 5 defenders. We implement this in Stan by using _all_ of this defensive player coordinates in the data. This means that $d$ has an extra dimension $I=5$. Now the dimensions of $d$ are (number of defenders, number of offensive players (states), number of time steps, number of coordinates (2)), which translates to (5,5,N,2) where N is defined by the length of the possession. Accordingly, we wrap the forward algorithm and the Viterbi algorithm in a loop to determine defensive assignment for each of the 5 defenders.
 
 Mathematically we can represent this as,
 
@@ -556,9 +597,9 @@ z_{t} \sim \mbox{Categorical}(\theta_{z_{t-1}}) \\
 \vec{\theta}_z \sim \mathcal{Dir}(6,6,6,6,6) \\
 $$
 
-Again, we specified the prior distribution on lambda to equally weight the locations in the convex combination, only this time with less variance. We specfied a similar prior distribution on the transition matrix.
+Again, we specified the prior distribution on lambda to equally weight the locations in the convex combination, only this time with less variance. We specfied a similar prior distribution on the transition matrix for each state.
 
-Below we provide the results from the model. Do to the comutational cost of fitting the model to the entire data we lowered the resolution of the data by a factor of 10 (i.e. selecting every 10th observation in each observed sequence). We then interpolated the gaps by carrying the last infered state forward.
+Due to the comutational cost of fitting the model to the entire data we lowered the resolution of the data by a factor of 10 (i.e. selecting every 10th observation in each observed sequence). We then interpolated the gaps by carrying the last infered state forward. The results of this model are provided below.
 
 ```{r}
 # code available in defense_1_low_res.R
@@ -578,9 +619,11 @@ Finally, we can visualize what defensive assignment looks like when inferred fro
 </video>
 </div>
 
-It looks like the assignments line up appropriately based on what we are observing. There is some noticable switching and double teaming. Unfortunatley, it is difficult to validate the assingments unless we watch footage of the possession. 
+It looks like the assignments line up appropriately based on what we are observing. Additionally, we can see some noticable switching and double teaming. Unfortunatley, it is difficult to validate the assingments unless we watch footage of the possession. 
 
 ## Conclusion
+
+We've shown how to fit a basic HMM with Stan and how to apply this methodology to basketball player tracking data. 
 
 Talk about how this can aid human users marking up data.
 Talk about how labeling the data would make the HMM parameters consistent with when the drive actually occurs.
@@ -593,4 +636,13 @@ Talk about pairing HMM with computer vision algorithms to apply meta data to the
 * Viterbi algo wiki
 * NESSIS paper
 * alex franks paper
-* betancourt mixture model case study
+
+Hidden Markov Models () https://en.wikipedia.org/wiki/Hidden_Markov_model
+
+Forward Algorithm () https://en.wikipedia.org/wiki/Forward_algorithm
+
+Viterbi Algorithm () https://en.wikipedia.org/wiki/Viterbi_algorithm
+
+Stan Users Guide (2019) https://mc-stan.org/docs/2_18/stan-users-guide/hmms-section.html
+
+Betancourt M. (2017) https://mc-stan.org/users/documentation/case-studies/identifying_mixture_models.html.

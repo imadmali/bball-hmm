@@ -1,6 +1,6 @@
 # create fake basketball possession with 1 defender (defense_example.RDS)
 
-source("graphics.R")
+source("../graphics.R")
 
 N <- 20
 tau <- 0.01

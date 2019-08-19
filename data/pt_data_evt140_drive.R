@@ -2,8 +2,7 @@
 
 library(dplyr)
 library(animation)
-
-source("graphics.R")
+source("../graphics.R")
 
 pt <- readRDS("0021500411.RDS")
 
@@ -13,7 +12,8 @@ drive$game <- pt$game %>%
 
 # drop time after the event takes place (i.e. when the game clock stops)
 gc_stop_indx <- which(diff(drive$game$game_clock) == 0)
-drive$game <- drive$game[-gc_stop_indx,]
+drive$game <- drive$game %>%
+  filter(row_number() < head(gc_stop_indx,1))
 
 lavine_coords <- drive$game %>%
   select(game_clock, unknown1, a5_ent, a5_x, a5_y) %>%

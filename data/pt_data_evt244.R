@@ -2,7 +2,7 @@
 
 library(dplyr)
 library(animation)
-source("graphics.R")
+source("../graphics.R")
 
 pt <- readRDS("0021500411.RDS")
 
