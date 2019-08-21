@@ -38,7 +38,6 @@ generated quantities {
   {
     int back_ptr[N, K];
     real best_logp[N, K];
-    real best_total_logp;
     for (k in 1:K)
       best_logp[1, k] = normal_lpdf(y[1] | psi[k], 1);
     for (t in 2:N) {

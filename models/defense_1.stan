@@ -46,7 +46,6 @@ generated quantities {
   for (i in 1:I) {
     int back_ptr[N, K];
     real best_logp[N, K];
-    real best_total_logp;
     for (k in 1:K)
       best_logp[1, k] = normal_lpdf(d[i,1] |  o[k,1]*lambda[1] + h*lambda[2] + b[1]*lambda[3], tau);
     for (t in 2:N) {

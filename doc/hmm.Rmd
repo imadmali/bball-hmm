@@ -643,6 +643,8 @@ Additionally, we can pair this modeling approach with other models to get a more
 
 Betancourt M. (2017) https://mc-stan.org/users/documentation/case-studies/identifying_mixture_models.html.  
 
+Cervone, D., D'Amour, A., Bornn, L. & Goldsberry, K. (2016) A Multiresolution Stochastic Process Model for Predicting Basketball Possession Outcomes. Version 3. https://arxiv.org/abs/1408.0777.
+
 Franks, A., Miller, A., Bornn, L. & Goldsberry, K. (2015) Characterizing the spatial structure of defensive skill in professional basketball. Version 3. https://arxiv.org/abs/1405.0231.  
 
 Keshri, S., Oh, M., Zhang, S. & Iyengar, G. (2017) [Automatic Event Detection in Basketball](http://nessis.org/nessis17/Keshri.pdf). Selected presentations from the 2017 NESSIS. http://nessis.org/nessis17.html.  
