@@ -24,9 +24,9 @@ rstan_options(auto_write = TRUE)
 
 
 
-This case study shows how we can implement Bayesian Hidden Markov Models (HMMs) in [Stan](https://mc-stan.org/) to extract useful information from basketball player tracking data. Specifically we show how to tag drive events and how to determine defensive assignment. Before diving into basketball data we show how to fit a HMM in Stan using a simple example. This should help build some intution for those who are unfamiliar wit HMMs and will also show how to specify a HMM using Stan.
+This case study shows how we can apply Bayesian inference to Hidden Markov Models (HMMs) using [Stan](https://mc-stan.org/) to extract useful information from basketball player tracking data. Specifically we show how to tag drive events and how to determine defensive assignment. Before diving into basketball data we show how to fit an hmm in Stan using a simple example. This should help build some intution for those who are unfamiliar wit HMMs and will also show how to specify an hmm using Stan.
 
-The code used to build this document is available in the followin GitHub repository: https://github.com/imadmali/bball-hmm.
+The code used to build this document is available in the following GitHub repository: https://github.com/imadmali/bball-hmm.
 
 
 
@@ -34,12 +34,12 @@ The code used to build this document is available in the followin GitHub reposit
 
 
 
-HMMs enable you to model a series of observed values. Each observed value maps to a state value, so you also have a series of states that corresponds to the series of observed values. The state series exhibits the Markov property so the value of the state at time $t$ only depends on the value of the state at time $t-1$. Often the states are hidden so the goal of the model is to,
+HMMs enable you to model a series of observed values. The generative model produces an observation for each latent state, so you also have a series of states that corresponds to the series of observed values. The state series exhibits the Markov property so the value of the state at time $t$ only depends on the value of the state at time $t-1$. Often the states are hidden so the goal of inference using an HMM is to,
 
 1. Estimate the parameters that allow you to transition from one state to the next and (given the state) the parameters involved in generating the observation.
 2. Predict the most likely state sequence based on the observed data and the parameters estimated in (1).
 
-The plot below outlines a HMM that we simulated. The model involves one sequence of observed outcomes generated from the normal distribution and two states. At each time step we are in one of the two states. Each of the states corresponds to a location parameter from the normal distribution. So the observed value is generated depending on which one of two location parameters is selected, which in turn depends on which state you are in. In more complicated data you could have multiple observations and many more states at each time step.
+The plot below outlines an HMM that we simulated. The model involves one sequence of observed outcomes generated from the normal distribution and two states. At each time step we are in one of the two states. Each of the states corresponds to a location parameter from the normal distribution. So the observed value is generated depending on which one of two location parameters is selected, which in turn depends on which state you are in. In more complicated data you could have multiple observations and many more states at each time step.
 
 You can see how state 1 corresponds to smaller values of the outcome while state 2 corresponds to relatively higher values of the outcome. In most real-word situations you do not know the state value at each time step because it is hidden. So in order to fit the model and infer the state sequence you first need to make an assumption as to how many possible states there might be at each time step.
 
@@ -68,13 +68,13 @@ Suppose we don't know how many states there are at each time step $t$, but we as
 
 $$
 \begin{align*}
-&y_t \sim \mathcal{N}(\mu_{z_t} | 1) \\
-&z_t \sim \mathcal{Cateogrical}(\theta_{z_{[t-1]}}) \\
+&y_t \sim \mathcal{N}(\mu_{z_t}, 1) \\
+&z_t \sim \mathcal{Categorical}(\theta_{z_{[t-1]}}) \\
 &\mbox{priors on } \mu_k \mbox{ and } \boldsymbol{\theta}\\
 \end{align*}
 $$
 
-This says that the distribution of each observation $y_t$ is normal with location parameter $\mu_{z_t}$ and constant scale. There are two values that $z_t$ can take at each time step which means that there are two values of $\mu$. So we have $\mu_{z_t} \in [\mu_1,\mu_2]$. The model also says that the state variable follows the categorical distribution which is parameterized by $\theta_{z_[t-1]}$. Since $z_t$ can take two values, $\theta_{z_[t-1]}$ also takes two values. Given the properties of the cateogrical distribution $\theta_{z_[t-1]}$ sums to 1. This means that $\boldsymbol{\theta}$ is a $2 \times 2$ matrix of probabilities.
+This says that the distribution of each observation $y_t$ is normal with location parameter $\mu_{z_t}$ and constant scale. There are two values that $z_t$ can take at each time step which means that there are two values of $\mu$. So we have $\mu_{z_t} \in [\mu_1,\mu_2]$. The model also says that the state variable follows the categorical distribution which is parameterized by $\theta_{z_[t-1]}$. Since $z_t$ can take two values, $\theta_{z_[t-1]}$ also takes two values. Given the properties of the categorical distribution $\theta_{z_[t-1]}$ sums to 1. This means that $\boldsymbol{\theta}$ is a $2 \times 2$ matrix of probabilities.
 
 A graphical representation of the model is provided below.
 
@@ -87,22 +87,26 @@ The parameters that we want to estimate in this model are the transition probabi
 * **Transition probabilities** govern how likely it is to move from one state to another or to stay within the same state. This is represented as a matrix.
 * **Emission probabilities** govern how likely the outcome was generated by that state.
 
-We can interpret an element in the transition matrix $\boldsymbol{theta}$ as the probability of going from the row state to the column state from time $t-1$ to time $t$. So the diagonal elements give the probability of staying in the same state, and the off-diagonal elements give the probability of transitioning from one state to the next. Continuting with our example we have,
+We can interpret an element in the stochastic matrix $\boldsymbol{\theta}$ (also known as the transition matrix) as the probability of going from the row state to the column state from time $t-1$ to time $t$. So the diagonal elements give the probability of staying in the same state, and the off-diagonal elements give the probability of transitioning from one state to the next. Continuting with our example we have,
 
-* $\theta_{1,1}$: the probability of going from state $k=1$ to state $k=1$.
-* $\theta_{2,2}$: the probability of going from state $k=2$ to state $k=2$.
-* $\theta_{1,2}$: the probability of going from state $k=1$ to state $k=2$.
-* $\theta_{2,1}$: the probability of going from state $k=2$ to state $k=1$.
+* $\theta_{1,1}$: the probability of going from state 1 to state 1.
+* $\theta_{2,2}$: the probability of going from state 2 to state 2.
+* $\theta_{1,2}$: the probability of going from state 1 to state 2.
+* $\theta_{2,1}$: the probability of going from state 2 to state 1.
 
-Since the data in this example are normally distributed the emission probabilities come from the normal distribution. The emission probabilities depend on the location and scale parameter associated with each state (i.e. the emission parameters). In our model we've assume the scale parameter is known and only have to estimate the location parameters $\mu_1$ and $\mu_2$ for each state.
+Since the data in this example are normally distributed the emission probabilities come from the normal distribution. The emission probabilities depend on the location and scale parameter associated with each state (i.e. the emission parameters). In our model we assume the scale parameter is known and only have to estimate the location parameters $\mu_1$ and $\mu_2$ for states 1 and 2.
 
-In order to estimate the parameters we need define the posterior distribution which requires us to specify the likelihood of the data and the priors. The likelihood is defined by the probability of observing that particular sequence of outcome variables. The priors are defined on the transition matrix and on the emission parameters. Since each row of the transition matrix sums to 1, a natural prior distribution choice is to define the Dirichlet distribution on each row of the matrix. Using the likelihood and the priors we can estimate the transition matrix and the emission parameters using the [forward algorithm](https://en.wikipedia.org/wiki/Forward_algorithm). Once we estimate the parameters we can determine the most probable state sequence that generated the sequence of observations. This can be acheived with the [Viterbi algorithm](https://en.wikipedia.org/wiki/Viterbi_algorithm). 
+In order to estimate the parameters we need define the posterior distribution which requires us to specify the likelihood of the data and the priors. The likelihood is defined by the probability of observing that particular sequence of outcome variables. The priors are defined on the stochastic matrix and on the emission parameters. Since each row of the stochastic matrix sums to 1, a natural prior distribution choice is to define the Dirichlet distribution on each row of the matrix. Using the [forward algorithm](https://en.wikipedia.org/wiki/Forward_algorithm) we can efficiently calculate the likelihood of the data. The forward algorithm is computing the followiing marginalization efficiently,
+$$
+p(y | \theta, \psi) = \sum_{z} p(y,z | \theta, \psi)
+$$
+We can then use Stan's variant of the [Hamiltonian Monte Carlo algorithm](https://en.wikipedia.org/wiki/Hamiltonian_Monte_Carlo) to estimate the stochastic matrix and emission parameters. Once we estimate the parameters we can determine the most probable state sequence that generated the sequence of observations. This can be acheived with the [Viterbi algorithm](https://en.wikipedia.org/wiki/Viterbi_algorithm). 
 
 ### Specifying the Model
 
 Below we represent the HMM in Stan (also available in `models/hmm_example.stan`). The `model {}` block specifies the priors and the forward algorithm to determine the most likely state at each point in time, and the `generated quantities {}` block specifies the Viterbi algorithm to enable us to determine the most likely state sequence. This model was adapted from the [Stan User's Guide](https://mc-stan.org/docs/2_18/stan-users-guide/hmms-section.html).
 
-Notice that we have chosen to define $\vec{\psi}$ as `positive_ordered[K] psi` instead of `real psi[K]`. This constraint is applied in order to enforce a strict separation between two $\psi$ values associated with the two states. If we don't do this, and we don't have strict enough priors, the sampling algorithm may struggle to find convergence among the parameter chains (Betancourt 2017). (In some situations strict priors may not be sufficient and an ordering _must_ be enforced.) An example of omitting the constraint specification is provided in `models/hmm_example_bad.stan`.
+Notice that we have chosen to define $\boldsymbol{\psi}$ as `positive_ordered[K] psi` instead of `real psi[K]`. This constraint is applied in order to enforce a strict separation between two $\psi$ values associated with the two states. While in theory weak priors that order the parameters are sufficient to identify the model, in practice Stan needs better parameterization so we enforce an ordering. If we don't do this the sampling algorithm may struggle to find convergence among the parameter chains (Betancourt 2017). An example of omitting the constraint specification is provided in `models/hmm_example_bad.stan`.
 
 ```{stan eval=FALSE, output.var='hmm_example'}
 data {
@@ -192,7 +196,7 @@ We go through these steps below.
 
 #### Diagnostics
 
-For the transition probabilities $\boldsymbol\theta{}$ and the parameters associated with the emission probabilities $\vec{\psi}$ we have the following parameter estimates. 
+For the transition probabilities $\boldsymbol\theta{}$ and the parameters associated with the emission probabilities $\boldsymbol{\psi}$ we have the following parameter estimates. 
 
 ```{r}
 print(hmm_fit, pars = "y_star", include = FALSE, probs = c(0.05,0.95))
@@ -204,7 +208,7 @@ With regards to traceplots to monitor convergence of chains we have the followin
 mcmc_trace(as.array(hmm_fit), regex_pars = "^theta\\[|^psi\\[", facet_args = list(nrow = 2))
 ```
 
-With `Rhat` values close to 1 and evidence of good mixing between the parameter chains we can conclude that our parameter estimates converged. 
+With `Rhat` values close to 1 and a high enough effective sample size (`n_eff`) we can conclude that our parameter estimates converged. 
 
 In the situation where priors are defined but an ordering is not enforced the lack of parameter convergence looks like the following (see `hmm_example_bad_fit.R` for code).
 
@@ -222,7 +226,7 @@ Notice how we have `Rhat` values different from 1 and the parameter chains that 
 
 #### Posterior Predictions
 
-Below we plot 100 predicted outcome sequences given the predicted states and emission parameter estimates. Notice how the predictions line up nicely with the observed output values. This is one indication that the data generation process was appropriately modeled.
+Below we plot 100 predicted outcome sequences given the predicted states and emission parameter estimates. (These predictions could also be implemented in the `generated quantities {}` block of our Stan model.) Notice how these posterior predictions based on the data line up nicely with the observed output values. This is one indication that the data generation process was appropriately modeled.
 
 ```{r fig.align='center', fig.height=4, fig.width=9}
 # extract samples
@@ -353,9 +357,9 @@ With the normal distributions defined over the observed data, our HMM is defined
 
 $$
 \begin{align*}
-u_t &\sim \mathcal{N}(\phi_{z_t} | \tau) \\
-v_t &\sim \mathcal{N}(\lambda_{z_t} | \rho) \\
-z_t &\sim \mathcal{cateogrical}(\theta_{z_{[t-1]}}) \\
+u_t &\sim \mathcal{N}(\phi_{z_t}, \tau) \\
+v_t &\sim \mathcal{N}(\lambda_{z_t}, \rho) \\
+z_t &\sim \mathcal{Categorical}(\theta_{z_{[t-1]}}) \\
 \theta_{z_t} &\sim \mathcal{Dir}(\alpha_{z_t}) \\
 \end{align*}
 $$
@@ -468,30 +472,30 @@ text(d[1],d[2], "defender", pos = 3, cex = 0.8)
 Using this definition, we model the defender's position as 2 draws from the normal distribution where the location parameter is defined as a convex combination of the hoop, ball, and offensive player coordinates.
 
 $$
-\vec{d}_{t} \sim \mathcal{N}(\vec{\mu}_{z_{t}}, \tau) \\
-\vec{\mu}_{z_t} = \vec{o}_{z_t}\lambda_{1} + \vec{h}\lambda_{3} + \vec{b}_t\lambda_{2} \\
+\mathbf{d}_{t} \sim \mathcal{N}(\boldsymbol{\mu}_{z_{t}}, \tau) \\
+\boldsymbol{\mu}_{z_t} = \mathbf{o}_{z_t}\lambda_{1} + \mathbf{h}\lambda_{3} + \mathbf{b}_t\lambda_{2} \\
 $$
 
-The index $z_t \in [1,2,\ldots,5]$ represents the hidden states (one of the 5 offensive player). $\vec{d}_t$ denotes the defensive player's coordinates (in this example we only consider one defender). $\vec{o}_{z_t}$ is the position of the offensive player associated with state $z_t$, $\vec{h}$ is the position of the hoop, and $\vec{b}_t$ is the position of the ball. Because $\vec{\mu}_{k}$ is a convex combination we also have the following constraint,
+The index $z_t \in [1,2,\ldots,5]$ represents the hidden states (one of the 5 offensive player). $\mathbf{d}_t$ denotes the defensive player's coordinates (in this example we only consider one defender). $\mathbf{o}_{z_t}$ is the position of the offensive player associated with state $z_t$, $\mathbf{h}$ is the position of the hoop, and $\mathbf{b}_t$ is the position of the ball. Because $\boldsymbol{\mu}_{k}$ is a convex combination we also have the following constraint,
 
 $$
 \lambda_{1} + \lambda_{2} + \lambda_{3} = 1 \\
 \Leftrightarrow \\
-\vec{\lambda} \mathbf{1} = 1
+\boldsymbol{\lambda} \mathbf{1} = 1
 $$
 This specifies that $\lambda$ is a simplex (the sum of all the elements equals 1).
 
 Putting the model together with the state transition matrix and prior distributions gives,
 
 $$
-\vec{d}_{t} \sim \mathcal{N}(\vec{\mu}_{z_{t}}, \tau) \\
-\vec{\mu}_{z_t} = \vec{o}_{z_t}\lambda_{1} + \vec{h}\lambda_{3} + \vec{b}_t\lambda_{2} \\
+\mathbf{d}_{t} \sim \mathcal{N}(\boldsymbol{\mu}_{z_{t}}, \tau) \\
+\boldsymbol{\mu}_{z_t} = \mathbf{o}_{z_t}\lambda_{1} + \mathbf{h}\lambda_{3} + \mathbf{b}_t\lambda_{2} \\
 z_{t} \sim \mbox{Categorical}(\theta_{z_{t-1}}) \\
 \mbox{s.t. } \lambda \mathbf{1} = 1 \\
-\mbox{priors on } \vec{\lambda}, \boldsymbol{\theta} 
+\mbox{priors on } \boldsymbol{\lambda}, \boldsymbol{\theta} 
 $$
 
-A natural choice for priors on $\vec{lambda}$ and each row of $\boldsymbol{\theta}$ would be the Dirichlet distribution. For a single defender, this model determines which one of the five offensive players is being guarded at each time step.
+A natural choice for priors on $\boldsymbol{lambda}$ and each row of $\boldsymbol{\theta}$ would be the Dirichlet distribution. For a single defender, this model determines which one of the five offensive players is being guarded at each time step.
 
 ### Simulated Data
 
@@ -510,7 +514,7 @@ points(d[,1], d[,2], col = "#ff6688", pch = 0)
 
 Since the ball and hoop are fixed, the convex combination only varies based the offensive player under consideration. Intuitively we want the model to say that the defender is guarding a particular offensive player if the defender is closest to the convex combination generated by that offensive player. In order to do so, we need to estimate what the convex combination will be.
 
-We fit the model to the simulated data assuming that the convex combination parameters are known and fixed to $\vec{\lambda} = [1/3,1/3,1/3]$. This approach strongly biases the model to prior knowledge about where defenders are situated when guarding offensive players. Specifically it states that locations (hoop, ball, and offensive player) are equally weighted so that the convex combination (i.e. optimal defensive player positioning) is not skewed towards certain locations. For example if we specified $\vec{\lambda} = [0.4,0.4,0.2]$ then the convex combination will be closer to the offensive player and the hoop, and farther away from the ball. In this situation, a defender who is closer to this convex combination will be assigned to the offensive player over a defender who is closer to the convex combination defined by $\vec{\lambda} = [1/3,1/3,1/3]$.
+We fit the model to the simulated data assuming that the convex combination parameters are known and fixed to $\boldsymbol{\lambda} = [1/3,1/3,1/3]$. This approach strongly biases the model to prior knowledge about where defenders are situated when guarding offensive players. Specifically it states that locations (hoop, ball, and offensive player) are equally weighted so that the convex combination (i.e. optimal defensive player positioning) is not skewed towards certain locations. For example if we specified $\boldsymbol{\lambda} = [0.4,0.4,0.2]$ then the convex combination will be closer to the offensive player and the hoop, and farther away from the ball. In this situation, a defender who is closer to this convex combination will be assigned to the offensive player over a defender who is closer to the convex combination defined by $\boldsymbol{\lambda} = [1/3,1/3,1/3]$.
 
 ```{r}
 # code available in defense_0a.R
@@ -519,7 +523,7 @@ defense_0a_stan <- readRDS("../results/defense_0a.RDS")
 print(defense_0a_stan$fit, pars = "y_star", include = FALSE, probs = c(0.05,0.95))
 ```
 
-The model below is similar to the model above except that it assumes $\vec{\lambda}$ is not known and has to be estimated from the data. We can still incorporate prior information about defensive positioning by applying the appropriate prior distribution on $\vec{\lambda}$. This will be less strict compared to declaring $\vec{\lambda}$ explicitly. Here we use the following Dirichlet prior, $\vec{\lambda} \sim \mathcal{Dir}(3,3,3)$. More importantly, this approach lets us learn about $\vec{\lambda}$ from the data, while accounting for our prior knowledge. More importantly, this gives us insight into the type of positioning defenders favor within the convex combination.
+The model below is similar to the model above except that it assumes $\boldsymbol{\lambda}$ is not known and has to be estimated from the data. We can still incorporate prior information about defensive positioning by applying the appropriate prior distribution on $\boldsymbol{\lambda}$. This will be less strict compared to declaring $\boldsymbol{\lambda}$ explicitly. Here we use the following Dirichlet prior, $\boldsymbol{\lambda} \sim \mathcal{Dir}(3,3,3)$. More importantly, this approach lets us learn about $\boldsymbol{\lambda}$ from the data, while accounting for our prior knowledge. More importantly, this gives us insight into the type of positioning defenders favor within the convex combination.
 
 ```{r}
 # priors on convex combination parameter
@@ -528,7 +532,7 @@ defense_0b_stan <- readRDS("../results/defense_0b.RDS")
 print(defense_0b_stan$fit, pars = "y_star", include = FALSE, probs = c(0.05,0.95))
 ```
 
-For each model we plot the states associated with each position for the defender (these correspond to the offensive player numbers). Additionally, we plot a convex combination $\mu_{z_[t=1]}$ for each offensive player. You can see how defensive assignment is related to how close the defender is to the convex combination. In this example the difference between fixing and estimating $\vec{\lambda}$ is apparent. When we estimate $\vec{\lambda}$ the defender favors positioning themselves closer to the offensive player and hoop, and father away from the ball. 
+For each model we plot the states associated with each position for the defender (these correspond to the offensive player numbers). Additionally, we plot a convex combination $\mu_{z_[t=1]}$ for each offensive player. You can see how defensive assignment is related to how close the defender is to the convex combination. In this example the difference between fixing and estimating $\boldsymbol{\lambda}$ is apparent. When we estimate $\boldsymbol{\lambda}$ the defender favors positioning themselves closer to the offensive player and hoop, and father away from the ball. 
 
 ```{r fig.align='center', fig.width=12, fig.height=6}
 samples_0a <- as.matrix(defense_0a_stan$fit)
@@ -580,25 +584,25 @@ text(mu_0b$mu5[1], mu_0b$mu5[2], expression(mu[5]), cex = 0.8)
 
 ### Player Tracking Data
 
-Now that we are confident with our model we can apply it to the player tracking data. We select a different event from the previous were there is more movement among players on the court. This possession still has the Minnesota Timberwolves as the offensive team and the Boston Celtics are the defensive team.
+Now that we are confident in our model we can apply it to the player tracking data. We select a different event from the previous were there is more movement among players on the court. This possession still has the Minnesota Timberwolves as the offensive team and the Boston Celtics are the defensive team.
 
-So far the models in this section have shown how to infer defensive assignment for only one defender. In order to apply this to event level player tracking data we need to determine defensive assignment for each of the 5 defenders. We implement this in Stan by using _all_ of this defensive player coordinates in the data. This means that $d$ has an extra dimension $I=5$. Now the dimensions of $d$ are (number of defenders, number of offensive players (states), number of time steps, number of coordinates (2)), which translates to (5,5,N,2) where N is defined by the length of the possession. Accordingly, we wrap the forward algorithm and the Viterbi algorithm in a loop to determine defensive assignment for each of the 5 defenders.
+So far the models in this section have shown how to infer defensive assignment for only one defender. In order to apply this to event level player tracking data we need to determine defensive assignment for each of the 5 defenders. We implement this in Stan by using _all_ of the defensive player coordinates in the data. This means that $d$ has an extra dimension $I=5$. Now the dimensions of $d$ are (number of defenders, number of offensive players (states), number of time steps, number of coordinates (2)), which translates to (5,5,N,2) where N is defined by the length of the possession. Accordingly, we wrap the forward algorithm and the Viterbi algorithm in a loop to determine defensive assignment for each of the 5 defenders.
 
 Mathematically we can represent this as,
 
 $$
-\vec{d}_{i,t} \sim \mathcal{N}(\vec{\mu}_{z_{t}}, \tau) \\
-\vec{\mu}_{z_t} = \vec{o}_{z_t}\lambda_{1} + \vec{h}\lambda_{3} + \vec{b}_t\lambda_{2} \\
+\mathbf{d}_{i,t} \sim \mathcal{N}(\boldsymbol{\mu}_{z_{t}}, \tau) \\
+\boldsymbol{\mu}_{z_t} = \mathbf{o}_{z_t}\lambda_{1} + \mathbf{h}\lambda_{3} + \mathbf{b}_t\lambda_{2} \\
 z_{t} \sim \mbox{Categorical}(\theta_{z_{t-1}}) \\
-\mbox{s.t. } \vec{\lambda} \mathbf{1} = 1 \\
+\mbox{s.t. } \boldsymbol{\lambda} \mathbf{1} = 1 \\
 \mbox{priors } \\
-\vec{\lambda} \sim \mathcal{Dir}(6,6,6) \\
-\vec{\theta}_z \sim \mathcal{Dir}(6,6,6,6,6) \\
+\boldsymbol{\lambda} \sim \mathcal{Dir}(6,6,6) \\
+\boldsymbol{\theta}_z \sim \mathcal{Dir}(6,6,6,6,6) \\
 $$
 
 Again, we specified the prior distribution on lambda to equally weight the locations in the convex combination, only this time with less variance. We specfied a similar prior distribution on the transition matrix for each state.
 
-Due to the comutational cost of fitting the model to the entire data we lowered the resolution of the data by a factor of 10 (i.e. selecting every 10th observation in each observed sequence). We then interpolated the gaps by carrying the last infered state forward. The results of this model are provided below.
+Due to the computational cost of fitting the model to the entire data we lowered the resolution of the data by a factor of 10 (i.e. selecting every 10th observation in each observed sequence). We then interpolated the gaps by carrying the last infered state forward. The results of this model are provided below.
 
 ```{r}
 # code available in defense_1_low_res.R
@@ -606,7 +610,7 @@ defense_1_stan <- readRDS("../results/defense_1_evt244_low_res.RDS")
 print(defense_1_stan$fit, pars = "y_star", include = FALSE, probs = c(0.05,0.95))
 ```
 
-Looking at the estimates of $\vec{\lambda}$ it is clear that (in this possession) the defenders favor positioning closer to the offensive player and hoop over the ball's location.
+Looking at the estimates of $\boldsymbol{\lambda}$ it is clear that (in this possession) the defenders favor positioning closer to the offensive player and hoop over the ball's location.
 
 For comparison we fit a model assuming that the transition matrix $\boldsymbol{\theta}$ is known (code available in `defense_2_low_res.R`). While the speed at which the model fit significantly increased, this is at the expense of not learning the transition matrix from the data/priors.
 
