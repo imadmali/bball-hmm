@@ -30,11 +30,11 @@ stan_data <- list(N = length(lavine_speed_smooth),
 fit <- stan("models/drive_1.stan", data = stan_data, chains = 4, iter = 1e3)
 saveRDS(list(fit = fit, data = stan_data), "results/drive_1.RDS")
 
-# mcmc_trace(as.array(fit), regex_pars = "^theta|^phi|^lambda|^y_star\\[1\\]")
+# mcmc_trace(as.array(fit), regex_pars = "^theta|^phi|^lambda|^z_star\\[1\\]")
 
 samples <- as.matrix(fit)
-y_star <- samples[,grep("^y_star", colnames(samples))]
-y_star <- colMeans(y_star)
+z_star <- samples[,grep("^z_star", colnames(samples))]
+z_star <- colMeans(z_star)
 
 pdf("media/drive_1.pdf", width = 9, height = 12)
 par(mfrow = c(3,1))
@@ -44,7 +44,7 @@ plot(lavine_dist, type = "l",
 plot(lavine_speed_smooth, type = "l",
      main = "Smooth Speed",
      xlab = "Time (25hz)", ylab = "Speed")
-plot(round(y_star), type = "l", pch = 1, cex = 0.5,
+plot(round(z_star), type = "l", pch = 1, cex = 0.5,
      main = "Hidden States",
      ylab = "State", xlab = "Time (25hz)",
      ylim = c(0.5, 2.5), yaxt = "n")
@@ -59,7 +59,7 @@ saveVideo({
     abline(v = i, col = "red", lwd = 2)
     plot(lavine_speed_smooth, type = "l", ylab = "1/Speed", xlab = "Time (25hz)")
     abline(v = i, col = "red", lwd = 2)
-    plot(round(y_star), type = "l", pch = 1, cex = 0.5, ylab = "State", xlab = "Time (25hz)",
+    plot(round(z_star), type = "l", pch = 1, cex = 0.5, ylab = "State", xlab = "Time (25hz)",
          ylim = c(0.5, 2.5), yaxt = "n")
     axis(2, c(1,2), c("Drive", "None"), las = 2)
     abline(v = i, col = "red", lwd = 2)

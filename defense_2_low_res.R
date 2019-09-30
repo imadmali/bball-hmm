@@ -25,15 +25,15 @@ fit <- stan("models/defense_2.stan", data = defense_low_res, chains = 4, iter = 
 saveRDS(list(fit = fit, data = defense_low_res), paste0("results/defense_2_", evt_id, "_low_res.RDS"))
 
 # mcmc_trace(as.array(fit), regex_pars = "^theta|^lambda")
-print(fit, pars = "y_star", include = FALSE, probs = c(0.05,0.95))
+print(fit, pars = "z_star", include = FALSE, probs = c(0.05,0.95))
 
 samples <- as.matrix(fit)
-y_star <- list()
+z_star <- list()
 for (i in 1:5) {
-  def_y_star <- rep(NA, defense$N)
-  def_y_star[defense_low_res$indxs] <- colMeans(samples[,grep(paste0("^y_star\\[",i), colnames(samples))])
-  def_y_star <- zoo::na.locf(def_y_star)
-  y_star[[i]] <- def_y_star
+  def_z_star <- rep(NA, defense$N)
+  def_z_star[defense_low_res$indxs] <- colMeans(samples[,grep(paste0("^z_star\\[",i), colnames(samples))])
+  def_z_star <- zoo::na.locf(def_z_star)
+  z_star[[i]] <- def_z_star
 }
 
 #' @param indx integer time step
@@ -58,6 +58,6 @@ saveVideo({
     text(1,48, paste0("Q",pt$game$quarter[i]," | GC: ",pt$game$game_clock[i]), pos=4, cex=1.5)
     plot_shot(pt, loop = i, static = F)
     for (j in 1:5)
-      def_assign(i, j, round(y_star[[j]][i]))
+      def_assign(i, j, round(z_star[[j]][i]))
   }
 }, video.name = paste0("media/defense_2_", evt_id, "_low_res",".mp4"))

@@ -10,8 +10,8 @@ fit <- stan("models/defense_0a.stan", data = defense_example, chains = 4, iter =
 saveRDS(list(fit = fit, data = defense_example), "results/defense_0a.RDS")
 
 samples <- as.matrix(fit)
-y_star <- samples[,grep("^y_star", colnames(samples))]
-y_star <- colMeans(y_star)
+z_star <- samples[,grep("^z_star", colnames(samples))]
+z_star <- colMeans(z_star)
 
 list2env(defense_example, .GlobalEnv)
 
@@ -28,7 +28,7 @@ plt_defense_example(defense_example, main = expression(paste("Defense Example: "
 lambda_txt <- sprintf("%.2f", round(lambda,2), collapse=",")
 lambda_txt <- paste(lambda_txt, collapse = ",")
 text(-2,1.9, bquote(paste(Lambda, " = [", .(lambda_txt),"]")), pos = 4)
-text(d[,1], d[,2], labels = paste(y_star), col = "#ff668890")
+text(d[,1], d[,2], labels = paste(z_star), col = "#ff668890")
 text(mu1[1], mu1[2], expression(mu[1]), cex = 0.8)
 text(mu2[1], mu2[2], expression(mu[2]), cex = 0.8)
 text(mu3[1], mu3[2], expression(mu[3]), cex = 0.8)
@@ -45,5 +45,5 @@ dist_mat <- list(o1 = apply(d, 1, function(x){dist(rbind(mu1,x))}),
 dist_mat <- data.frame(dist_mat)
 dist_mat$state <- c(apply(dist_mat, 1, which.min))
 
-rbind(hmm = unname(y_star),
+rbind(hmm = unname(z_star),
       dist = dist_mat$state)

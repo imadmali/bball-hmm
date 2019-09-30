@@ -143,8 +143,8 @@ model {
 }
 
 generated quantities {
-  int<lower=1,upper=K> y_star[N];
-  real log_p_y_star;
+  int<lower=1,upper=K> z_star[N];
+  real log_p_z_star;
   {
     int back_ptr[N, K];
     real best_logp[N, K];
@@ -163,19 +163,19 @@ generated quantities {
         }
       }
     }
-    log_p_y_star = max(best_logp[N]);
+    log_p_z_star = max(best_logp[N]);
     for (k in 1:K)
-      if (best_logp[N, k] == log_p_y_star)
-        y_star[N] = k;
+      if (best_logp[N, k] == log_p_z_star)
+        z_star[N] = k;
     for (t in 1:(N - 1))
-      y_star[N - t] = back_ptr[N - t + 1, y_star[N - t + 1]];
+      z_star[N - t] = back_ptr[N - t + 1, z_star[N - t + 1]];
   }
 }
 ```
 
 ### Fitting the Model
 
-We fit the model to the data provided above in order to estimate the parameters `theta` and `mu` along with the hidden state sequence `y_star`.
+We fit the model to the data provided above in order to estimate the parameters `theta` and `mu` along with the hidden state sequence `z_star`.
 
 ```{r results='hide', warning=FALSE}
 # code available in hmm_example.R
@@ -199,7 +199,7 @@ We go through these steps below.
 For the transition probabilities $\boldsymbol\theta{}$ and the parameters associated with the emission probabilities $\boldsymbol{\psi}$ we have the following parameter estimates. 
 
 ```{r}
-print(hmm_fit, pars = "y_star", include = FALSE, probs = c(0.05,0.95))
+print(hmm_fit, pars = "z_star", include = FALSE, probs = c(0.05,0.95))
 ```
 
 With `Rhat` values close to 1 and a high enough effective sample size (`n_eff`) we can conclude that our parameter estimates converged. 
@@ -215,7 +215,7 @@ Below we have diagnostics from a situation where priors are defined but an order
 ```{r}
 # code available in hmm_example_bad.R
 hmm_bad_stan <- readRDS("../results/hmm_example_bad.RDS")
-print(hmm_bad_stan$fit, pars = "y_star", include = FALSE, probs = c(0.05,0.95))
+print(hmm_bad_stan$fit, pars = "z_star", include = FALSE, probs = c(0.05,0.95))
 ```
 
 ```{r fig.align='center', fig.height=5, fig.width=10}
@@ -231,12 +231,12 @@ Below we plot 100 predicted outcome sequences given the predicted states and emi
 samples <- as.matrix(hmm_fit)
 theta <- samples[,grep("^theta",colnames(samples))]
 psi <- samples[,grep("^psi",colnames(samples))]
-y_star <- samples[,grep("^y_star",colnames(samples))]
+z_star <- samples[,grep("^z_star",colnames(samples))]
 
 # simulate observations for each iteration in the sample
 y_hat <- list()
 for (i in 1:nrow(samples)) {
-  psi_seq <- sapply(y_star[i,], function(x){psi[i,x]})
+  psi_seq <- sapply(z_star[i,], function(x){psi[i,x]})
   y_hat[[i]] <- rnorm(length(psi_seq), psi_seq, 1)
 }
 
@@ -266,7 +266,7 @@ plot(hmm_data$z, type="s",
      xlab = "Time",
      ylim = c(0.5,2.5), yaxt = "n")
 axis(2, 1:2, 1:2)
-points(colMeans(y_star), cex = 0.5)
+points(colMeans(z_star), cex = 0.5)
 legend("bottomright", c("Actual","Predicted"), pch = c(NA,1), lty = c(1,NA), cex = 0.5)
 plot(hmm_data$y, type = "l",
      main = "Observed Output",
@@ -375,7 +375,7 @@ Now we can fit the model to LaVine's data for the single drive possession. We pr
 ```{r}
 # code available in drive_1.R
 drive_stan <- readRDS("../results/drive_1.RDS")
-print(drive_stan$fit, pars = 'y_star', include = FALSE, probs = c(0.05,0.95))
+print(drive_stan$fit, pars = 'z_star', include = FALSE, probs = c(0.05,0.95))
 ```
 
 ```{r fig.align='center', fig.height=5, fig.width=10}
@@ -393,13 +393,13 @@ We post-process the predicted state values and layer them on top of the original
 samples <- as.matrix(drive_stan$fit)
 phi <- samples[,grep("^phi", colnames(samples))]
 lambda <- samples[,grep("^lambda", colnames(samples))]
-y_star <- samples[,grep("^y_star", colnames(samples))]
+z_star <- samples[,grep("^z_star", colnames(samples))]
 
 phi_hat <- list()
 lambda_hat <- list()
 for (i in 1:nrow(samples)) {
-  phi_seq <- sapply(y_star[i,], function(x){phi[i,x]})
-  lambda_seq <- sapply(y_star[i,], function(x){lambda[i,x]})
+  phi_seq <- sapply(z_star[i,], function(x){phi[i,x]})
+  lambda_seq <- sapply(z_star[i,], function(x){lambda[i,x]})
   phi_hat[[i]] <- rnorm(length(phi_seq), phi_seq, 0.1)
   lambda_hat[[i]] <- rnorm(length(lambda_seq), lambda_seq, 0.1)
 }
@@ -424,7 +424,7 @@ for (i in 1:length(indxs))
 lines(drive_stan$data$u, lwd = 2)
 legend("topright", c("Observed","Predicted"), col = c("#000000","#ff668890"), lty = c(1,1), lwd = c(2,1), cex = 0.8)
 # states
-plot(round(colMeans(y_star)), type = "l", pch = 1, cex = 0.5,
+plot(round(colMeans(z_star)), type = "l", pch = 1, cex = 0.5,
      main = "Hidden States",
      ylab = "State", xlab = "Time (25hz)",
      ylim = c(0.5, 2.5), yaxt = "n")
@@ -518,7 +518,7 @@ We fit the model to the simulated data assuming that the convex combination para
 # code available in defense_0a.R
 # fixing convex combination parameter
 defense_0a_stan <- readRDS("../results/defense_0a.RDS")
-print(defense_0a_stan$fit, pars = "y_star", include = FALSE, probs = c(0.05,0.95))
+print(defense_0a_stan$fit, pars = "z_star", include = FALSE, probs = c(0.05,0.95))
 ```
 
 The model below is similar to the model above except that it assumes $\boldsymbol{\lambda}$ is not known and has to be estimated from the data. We can still incorporate prior information about defensive positioning by applying the appropriate prior distribution on $\boldsymbol{\lambda}$. This will be less strict compared to declaring $\boldsymbol{\lambda}$ explicitly. Here we use the following Dirichlet prior, $\boldsymbol{\lambda} \sim \mathcal{Dir}(3,3,3)$. More importantly, this approach lets us learn about $\boldsymbol{\lambda}$ from the data, while accounting for our prior knowledge. More importantly, this gives us insight into the type of positioning defenders favor within the convex combination.
@@ -527,7 +527,7 @@ The model below is similar to the model above except that it assumes $\boldsymbo
 # priors on convex combination parameter
 # code available in defense_0b.R
 defense_0b_stan <- readRDS("../results/defense_0b.RDS")
-print(defense_0b_stan$fit, pars = "y_star", include = FALSE, probs = c(0.05,0.95))
+print(defense_0b_stan$fit, pars = "z_star", include = FALSE, probs = c(0.05,0.95))
 ```
 
 For each model we plot the states associated with each position for the defender (these correspond to the offensive player numbers). Additionally, we plot a convex combination $\mu_{z_[t=1]}$ for each offensive player. You can see how defensive assignment is related to how close the defender is to the convex combination. In this example the difference between fixing and estimating $\boldsymbol{\lambda}$ is apparent. When we estimate $\boldsymbol{\lambda}$ the defender favors positioning themselves closer to the offensive player and hoop, and father away from the ball. 
@@ -535,10 +535,10 @@ For each model we plot the states associated with each position for the defender
 ```{r fig.align='center', fig.width=12, fig.height=6}
 samples_0a <- as.matrix(defense_0a_stan$fit)
 samples_0b <- as.matrix(defense_0b_stan$fit)
-y_star_0a <- samples_0a[,grep("^y_star", colnames(samples_0a))]
-y_star_0b <- samples_0b[,grep("^y_star", colnames(samples_0b))]
-y_star_0a <- colMeans(y_star_0a)
-y_star_0b <- colMeans(y_star_0b)
+z_star_0a <- samples_0a[,grep("^z_star", colnames(samples_0a))]
+z_star_0b <- samples_0b[,grep("^z_star", colnames(samples_0b))]
+z_star_0a <- colMeans(z_star_0a)
+z_star_0b <- colMeans(z_star_0b)
 
 lambda <- samples_0b[,grep("^lambda", colnames(samples_0b))]
 lambda <- colMeans(lambda)
@@ -561,7 +561,7 @@ par(mfrow = c(1,2))
 plt_defense_example(defense_example, main = expression(paste("Defense Example: ", lambda, " Fixed")))
 lambda_0a_txt <- paste(round(c(1/3,1/3,1/3),2), collapse = ",")
 text(-2,1.9, bquote(paste(Lambda, " = [", .(lambda_0a_txt),"]")), pos = 4)
-text(d[,1], d[,2], labels = paste(y_star_0a), col = "#ff668890")
+text(d[,1], d[,2], labels = paste(z_star_0a), col = "#ff668890")
 text(mu_0a$mu1[1], mu_0a$mu1[2], expression(mu[1]), cex = 0.8)
 text(mu_0a$mu2[1], mu_0a$mu2[2], expression(mu[2]), cex = 0.8)
 text(mu_0a$mu3[1], mu_0a$mu3[2], expression(mu[3]), cex = 0.8)
@@ -572,7 +572,7 @@ plt_defense_example(defense_example, main = expression(paste("Defense Example: "
 lambda_0b_txt <- sprintf("%.2f", round(lambda,2), collapse=",")
 lambda_0b_txt <- paste(lambda_0b_txt, collapse = ",")
 text(-2,1.9, bquote(paste(Lambda %~~% phantom(), "[", .(lambda_0b_txt),"]")), pos = 4)
-text(d[,1], d[,2], labels = paste(y_star_0b), col = "#ff668890")
+text(d[,1], d[,2], labels = paste(z_star_0b), col = "#ff668890")
 text(mu_0b$mu1[1], mu_0b$mu1[2], expression(mu[1]), cex = 0.8)
 text(mu_0b$mu2[1], mu_0b$mu2[2], expression(mu[2]), cex = 0.8)
 text(mu_0b$mu3[1], mu_0b$mu3[2], expression(mu[3]), cex = 0.8)
@@ -605,7 +605,7 @@ Due to the computational cost of fitting the model to the entire data we lowered
 ```{r}
 # code available in defense_1_low_res.R
 defense_1_stan <- readRDS("../results/defense_1_evt244_low_res.RDS")
-print(defense_1_stan$fit, pars = "y_star", include = FALSE, probs = c(0.05,0.95))
+print(defense_1_stan$fit, pars = "z_star", include = FALSE, probs = c(0.05,0.95))
 ```
 
 Looking at the estimates of $\boldsymbol{\lambda}$ it is clear that (in this possession) the defenders favor positioning closer to the offensive player and hoop over the ball's location.

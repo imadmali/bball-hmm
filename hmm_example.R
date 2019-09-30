@@ -14,7 +14,7 @@ samples <- as.matrix(hmm_fit)
 
 psi_indx <- grep("^psi\\[", colnames(samples))
 theta_indx <- grep("^theta\\[", colnames(samples))
-y_star_indx <- grep("^y_star\\[", colnames(samples))
+z_star_indx <- grep("^z_star\\[", colnames(samples))
 
 traceplot(hmm_fit, pars = "theta")
 traceplot(hmm_fit, pars = "psi")
@@ -22,7 +22,7 @@ traceplot(hmm_fit, pars = "psi")
 colMeans(samples[,theta_indx])
 colMeans(samples[,psi_indx])
 
-y_star <- colMeans(samples[,y_star_indx])
+z_star <- colMeans(samples[,z_star_indx])
 
 # visualization
 pdf("media/hmm_example.pdf", width = 12, height = 9)
@@ -31,7 +31,7 @@ plot(hmm_data$z, type="l",
      main = "Latent States",
      ylab = "State Value",
      xlab = "Time")
-points(y_star, cex = 0.5)
+points(z_star, cex = 0.5)
 legend("bottomright", c("Actual","Predicted"), pch = c(NA,1), lty = c(1,NA), cex = 0.8)
 plot(hmm_data$y, type = "l",
      main = "Observed Output",

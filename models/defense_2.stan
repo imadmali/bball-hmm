@@ -38,8 +38,8 @@ model {
 }
 
 generated quantities {
-  int<lower=1,upper=K> y_star[I,N];
-  real log_p_y_star;
+  int<lower=1,upper=K> z_star[I,N];
+  real log_p_z_star;
   for (i in 1:I) {
     int back_ptr[N, K];
     real best_logp[N, K];
@@ -59,11 +59,11 @@ generated quantities {
         }
       }
     }
-    log_p_y_star = max(best_logp[N]);
+    log_p_z_star = max(best_logp[N]);
     for (k in 1:K)
-      if (best_logp[N, k] == log_p_y_star)
-        y_star[i,N] = k;
+      if (best_logp[N, k] == log_p_z_star)
+        z_star[i,N] = k;
     for (t in 1:(N - 1))
-      y_star[i, N - t] = back_ptr[N - t + 1, y_star[i, N - t + 1]];
+      z_star[i, N - t] = back_ptr[N - t + 1, z_star[i, N - t + 1]];
   }
 }
