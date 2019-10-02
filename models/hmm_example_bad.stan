@@ -7,24 +7,24 @@ data {
 
 parameters {
   simplex[K] theta[K];
-  real psi[K];
-  // positive_ordered[K] psi;
+  real mu[K];
+  // positive_ordered[K] mu;
 }
 
 model {
   // priors
-  target+= normal_lpdf(psi[1] | 3, 1);
-  target+= normal_lpdf(psi[2] | 10, 1);
+  target+= normal_lpdf(mu[1] | 3, 1);
+  target+= normal_lpdf(mu[2] | 10, 1);
   // forward algorithm
   {
   real acc[K];
   real gamma[N, K];
   for (k in 1:K)
-    gamma[1, k] = normal_lpdf(y[1] | psi[k], 1);
+    gamma[1, k] = normal_lpdf(y[1] | mu[k], 1);
   for (t in 2:N) {
     for (k in 1:K) {
       for (j in 1:K)
-        acc[j] = gamma[t-1, j] + log(theta[j, k]) + normal_lpdf(y[t] | psi[k], 1);
+        acc[j] = gamma[t-1, j] + log(theta[j, k]) + normal_lpdf(y[t] | mu[k], 1);
       gamma[t, k] = log_sum_exp(acc);
     }
   }
@@ -39,13 +39,13 @@ generated quantities {
     int back_ptr[N, K];
     real best_logp[N, K];
     for (k in 1:K)
-      best_logp[1, k] = normal_lpdf(y[1] | psi[k], 1);
+      best_logp[1, k] = normal_lpdf(y[1] | mu[k], 1);
     for (t in 2:N) {
       for (k in 1:K) {
         best_logp[t, k] = negative_infinity();
         for (j in 1:K) {
           real logp;
-          logp = best_logp[t-1, j] + log(theta[j, k]) + normal_lpdf(y[t] | psi[k], 1);
+          logp = best_logp[t-1, j] + log(theta[j, k]) + normal_lpdf(y[t] | mu[k], 1);
           if (logp > best_logp[t, k]) {
             back_ptr[t, k] = j;
             best_logp[t, k] = logp;

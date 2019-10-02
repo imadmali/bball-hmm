@@ -24,7 +24,7 @@ rstan_options(auto_write = TRUE)
 
 
 
-This case study shows how we can apply Bayesian inference to Hidden Markov Models (HMMs) using [Stan](https://mc-stan.org/) to extract useful information from basketball player tracking data. Specifically we show how to tag drive events and how to determine defensive assignment. Before diving into basketball data we show how to fit an hmm in Stan using a simple example. This should help build some intution for those who are unfamiliar wit HMMs and will also show how to specify an hmm using Stan.
+This case study shows how we can apply Bayesian inference to Hidden Markov Models (HMMs) using [Stan](https://mc-stan.org/) to extract useful information from basketball player tracking data. Specifically we show how to tag drive events and how to determine defensive assignment. Before diving into basketball data we show how to fit an HMM in Stan using a simple example. This should help build some intution for those who are unfamiliar with HMMs and will also show how to specify an HMM using Stan.
 
 The code used to build this document is available in the following GitHub repository: https://github.com/imadmali/bball-hmm.
 
@@ -39,7 +39,7 @@ HMMs enable you to model a series of observed values. The generative model produ
 1. Estimate the parameters that allow you to transition from one state to the next and (given the state) the parameters involved in generating the observation.
 2. Predict the most likely state sequence based on the observed data and the parameters estimated in (1).
 
-The plot below outlines an HMM that we simulated. The model involves one sequence of observed outcomes generated from the normal distribution and two states. At each time step we are in one of the two states. Each of the states corresponds to a location parameter from the normal distribution. So the observed value is generated depending on which one of two location parameters is selected, which in turn depends on which state you are in. In more complicated data you could have multiple observations and many more states at each time step.
+The plot below outlines an HMM that we simulated. The model involves one sequence of observed outcomes generated from the normal distribution and two states. At each time step we are in one of the two states. Each of the states corresponds to a location parameter from the normal distribution. This means that the observed value is generated depending on which one of two location parameters is selected, which in turn depends on which state you are in. In more complicated data you could have multiple observations and many more states at each time step.
 
 You can see how state 1 corresponds to smaller values of the outcome while state 2 corresponds to relatively higher values of the outcome. In most real-word situations you do not know the state value at each time step because it is hidden. So in order to fit the model and infer the state sequence you first need to make an assumption as to how many possible states there might be at each time step.
 
@@ -74,7 +74,7 @@ $$
 \end{align*}
 $$
 
-This says that the distribution of each observation $y_t$ is normal with location parameter $\mu_{z_t}$ and constant scale. There are two values that $z_t$ can take at each time step which means that there are two values of $\mu$. So we have $\mu_{z_t} \in [\mu_1,\mu_2]$. The model also says that the state variable follows the categorical distribution which is parameterized by $\theta_{z_[t-1]}$. Since $z_t$ can take two values, $\theta_{z_[t-1]}$ also takes two values. Given the properties of the categorical distribution $\theta_{z_[t-1]}$ sums to 1. This means that $\boldsymbol{\theta}$ is a $2 \times 2$ matrix of probabilities.
+This says that the distribution of each observation $y_t$ is normal with location parameter $\mu_{z_t}$ and constant scale. There are two values that $z_t$ can take at each time step which means that there are two values of $\mu$. So we have $\mu_{z_t} \in [\mu_1,\mu_2]$. The model also says that the state variable follows the categorical distribution which is parameterized by $\theta_{z_[t-1]}$. Since $z_t$ can take two values, $\theta_{z_[t-1]}$ also takes two values. Given the properties of the categorical distribution $\theta_{z_[t-1]}$ sums to 1. This means that $\boldsymbol{\theta}$ is a $2 \times 2$ stochastic matrix (also known as a transition matrix).
 
 A graphical representation of the model is provided below.
 
@@ -84,10 +84,10 @@ A graphical representation of the model is provided below.
 
 The parameters that we want to estimate in this model are the transition probabilities ($\boldsymbol{\theta}$) and the parameters associated with the emission probabilities ($\mu_1$,$\mu_2$).
 
-* **Transition probabilities** govern how likely it is to move from one state to another or to stay within the same state. This is represented as a stochastic matrix (also known as a transition matrix).
+* **Transition probabilities** govern how likely it is to move from one state to another or to stay within the same state. 
 * **Emission probabilities** govern how likely the outcome was generated by that state.
 
-We can interpret an element in the stochastic matrix $\boldsymbol{\theta}$ as the probability of going from the row state to the column state from time $t-1$ to time $t$. So the diagonal elements give the probability of staying in the same state, and the off-diagonal elements give the probability of transitioning from one state to the next. Continuting with our example we have,
+We can interpret an element in the stochastic matrix $\boldsymbol{\theta}$ as the probability of going from the row state to the column state from time $t-1$ to time $t$. So the diagonal elements give the probability of staying in the same state, and the off-diagonal elements give the probability of transitioning from one state to the next. Continuing with our example we have,
 
 * $\theta_{1,1}$: the probability of going from state 1 to state 1.
 * $\theta_{2,2}$: the probability of going from state 2 to state 2.
@@ -96,17 +96,20 @@ We can interpret an element in the stochastic matrix $\boldsymbol{\theta}$ as th
 
 Since the data in this example are normally distributed the emission probabilities come from the normal distribution. The emission probabilities depend on the location and scale parameter associated with each state (i.e. the emission parameters). In our model we assume the scale parameter is known and only have to estimate the location parameters $\mu_1$ and $\mu_2$ for states 1 and 2.
 
-In order to estimate the parameters we need define the posterior distribution which requires us to specify the likelihood of the data and the priors. The likelihood is defined by the probability of observing that particular sequence of outcome variables. The priors are defined on the stochastic matrix and on the emission parameters. Since each row of the stochastic matrix sums to 1, a natural prior choice is the Dirichlet distribution on each row of the matrix. Using the [forward algorithm](https://en.wikipedia.org/wiki/Forward_algorithm) we can efficiently calculate the likelihood of the data. The forward algorithm is computing the following marginalization efficiently,
+In order to estimate the parameters we need to define the posterior distribution which requires us to specify the likelihood of the data and the priors. The likelihood is defined by the probability of observing that particular sequence of outcome variables. Using the [forward algorithm](https://en.wikipedia.org/wiki/Forward_algorithm) we can efficiently calculate the likelihood of the data. The forward algorithm is computing the following marginalization efficiently,
 $$
-p(y | \theta, \psi) = \sum_{z} p(y,z | \theta, \psi)
+p(y | \theta, \mu) = \sum_{z} p(y,z | \theta, \mu)
 $$
+
+The priors are defined on the stochastic matrix and on the emission parameters. Since each row of the stochastic matrix sums to 1, a natural prior choice is the Dirichlet distribution on each row of the matrix.
+
 We can then use Stan's variant of the [Hamiltonian Monte Carlo algorithm](https://en.wikipedia.org/wiki/Hamiltonian_Monte_Carlo) to estimate the stochastic matrix and emission parameters. Once we estimate the parameters we can determine the most probable state sequence that generated the sequence of observations. This can be computed with the [Viterbi algorithm](https://en.wikipedia.org/wiki/Viterbi_algorithm). 
 
 ### Specifying the Model
 
-Below we represent the HMM in Stan (also available in `models/hmm_example.stan`). The `model {}` block specifies the priors and the forward algorithm to determine the most likely state at each point in time, and the `generated quantities {}` block specifies the Viterbi algorithm to enable us to determine the most likely state sequence. This model was adapted from the [Stan User's Guide](https://mc-stan.org/docs/2_18/stan-users-guide/hmms-section.html).
+Below we represent the HMM in Stan (also available in `models/hmm_example.stan`). The `model {}` block specifies the priors and the forward algorithm to determine the most likely state at each point in time, and the `generated quantities {}` block specifies the Viterbi algorithm which enables us to determine the most likely state sequence. This model was adapted from the [Stan User's Guide](https://mc-stan.org/docs/2_18/stan-users-guide/hmms-section.html).
 
-Notice that we have chosen to define $\boldsymbol{\psi}$ as `positive_ordered[K] psi` instead of `real psi[K]`. This constraint is applied in order to enforce a strict separation between two $\psi$ values associated with the two states. While in theory weak priors that order the parameters are sufficient to identify the model, in practice Stan needs better parameterization so we enforce an ordering. If we don't do this the sampling algorithm may struggle to find convergence among the parameter chains (Betancourt 2017). An example of omitting the constraint specification is provided in `models/hmm_example_bad.stan`.
+Notice that we have chosen to define $\mu$ as `positive_ordered[K] mu` instead of `real mu[K]`. This constraint is applied in order to enforce a strict separation between the two $\mu$ values associated with the two states. While in theory weak priors that order the parameters are sufficient to identify the model, in practice Stan needs better parameterization so we enforce an ordering. If we don't do this the sampling algorithm may struggle to find convergence among the parameter chains (see Betancourt 2017 for more detail). An example of omitting the constraint specification is provided in `models/hmm_example_bad.stan`.
 
 ```{stan eval=FALSE, output.var='hmm_example'}
 data {
@@ -117,24 +120,24 @@ data {
 
 parameters {
   simplex[K] theta[K];
-  // real psi[K];
-  positive_ordered[K] psi;
+  // real mu[K];
+  positive_ordered[K] mu;
 }
 
 model {
   // priors
-  target+= normal_lpdf(psi[1] | 3, 1);
-  target+= normal_lpdf(psi[2] | 10, 1);
+  target+= normal_lpdf(mu[1] | 3, 1);
+  target+= normal_lpdf(mu[2] | 10, 1);
   // forward algorithm
   {
   real acc[K];
   real gamma[N, K];
   for (k in 1:K)
-    gamma[1, k] = normal_lpdf(y[1] | psi[k], 1);
+    gamma[1, k] = normal_lpdf(y[1] | mu[k], 1);
   for (t in 2:N) {
     for (k in 1:K) {
       for (j in 1:K)
-        acc[j] = gamma[t-1, j] + log(theta[j, k]) + normal_lpdf(y[t] | psi[k], 1);
+        acc[j] = gamma[t-1, j] + log(theta[j, k]) + normal_lpdf(y[t] | mu[k], 1);
       gamma[t, k] = log_sum_exp(acc);
     }
   }
@@ -149,13 +152,13 @@ generated quantities {
     int back_ptr[N, K];
     real best_logp[N, K];
     for (k in 1:K)
-      best_logp[1, k] = normal_lpdf(y[1] | psi[k], 1);
+      best_logp[1, k] = normal_lpdf(y[1] | mu[k], 1);
     for (t in 2:N) {
       for (k in 1:K) {
         best_logp[t, k] = negative_infinity();
         for (j in 1:K) {
           real logp;
-          logp = best_logp[t-1, j] + log(theta[j, k]) + normal_lpdf(y[t] | psi[k], 1);
+          logp = best_logp[t-1, j] + log(theta[j, k]) + normal_lpdf(y[t] | mu[k], 1);
           if (logp > best_logp[t, k]) {
             back_ptr[t, k] = j;
             best_logp[t, k] = logp;
@@ -196,7 +199,7 @@ We go through these steps below.
 
 #### Diagnostics
 
-For the transition probabilities $\boldsymbol\theta{}$ and the parameters associated with the emission probabilities $\boldsymbol{\psi}$ we have the following parameter estimates. 
+For the transition probabilities $\boldsymbol\theta{}$ and the parameters associated with the emission probabilities $\mu$ we have the following parameter estimates. 
 
 ```{r}
 print(hmm_fit, pars = "z_star", include = FALSE, probs = c(0.05,0.95))
@@ -207,10 +210,10 @@ With `Rhat` values close to 1 and a high enough effective sample size (`n_eff`) 
 We can also look at the traceplots to get an idea of what convergence among chains looks like.
 
 ```{r fig.align='center', fig.height=5, fig.width=10}
-mcmc_trace(as.array(hmm_fit), regex_pars = "^theta\\[|^psi\\[", facet_args = list(nrow = 2))
+mcmc_trace(as.array(hmm_fit), regex_pars = "^theta\\[|^mu\\[", facet_args = list(nrow = 2))
 ```
 
-Below we have diagnostics from a situation where priors are defined but an ordering is not enforced. You can see how the parameter chains look like they have not converged (see `hmm_example_bad_fit.R` for code). Notice how we have `Rhat` values different from 1 and small effective sample sizes; all indicators of bad convergence.
+Below we have diagnostics from a situation where priors are defined but an ordering is not enforced (see `hmm_example_bad_fit.R` for the code). You can see how the parameter chains look like they have not converged. Notice how we have `Rhat` values different from 1 and small effective sample sizes; all indicators of bad convergence.
 
 ```{r}
 # code available in hmm_example_bad.R
@@ -219,7 +222,7 @@ print(hmm_bad_stan$fit, pars = "z_star", include = FALSE, probs = c(0.05,0.95))
 ```
 
 ```{r fig.align='center', fig.height=5, fig.width=10}
-mcmc_trace(as.array(hmm_bad_stan$fit), regex_pars = "^theta\\[|^psi\\[", facet_args = list(ncol = 2))
+mcmc_trace(as.array(hmm_bad_stan$fit), regex_pars = "^theta\\[|^mu\\[", facet_args = list(ncol = 2))
 ```
 
 #### Posterior Predictions
@@ -230,13 +233,13 @@ Below we plot 100 predicted outcome sequences given the predicted states and emi
 # extract samples
 samples <- as.matrix(hmm_fit)
 theta <- samples[,grep("^theta",colnames(samples))]
-psi <- samples[,grep("^psi",colnames(samples))]
+mu <- samples[,grep("^mu",colnames(samples))]
 z_star <- samples[,grep("^z_star",colnames(samples))]
 
 # simulate observations for each iteration in the sample
 y_hat <- list()
 for (i in 1:nrow(samples)) {
-  psi_seq <- sapply(z_star[i,], function(x){psi[i,x]})
+  psi_seq <- sapply(z_star[i,], function(x){mu[i,x]})
   y_hat[[i]] <- rnorm(length(psi_seq), psi_seq, 1)
 }
 
@@ -278,7 +281,7 @@ lines(y_plt, lwd = 3)
 legend("bottomright", c("State 1","State 2"), lty = c(1,1), lwd = c(1,3), cex = 0.8)
 ```
 
-We can now adapt the methodology discsussed in this section to identify a drive and defensive assignment in basketball player tracking data.
+We can now adapt the methodology discsussed in this section to identify a drive event and defensive assignment using basketball player tracking data.
 
 
 

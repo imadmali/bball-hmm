@@ -12,12 +12,12 @@ saveRDS(list(fit = hmm_fit, data = stan_data), "results/hmm_example_bad.RDS")
 
 samples <- as.matrix(hmm_fit)
 
-psi_indx <- grep("^psi\\[", colnames(samples))
+psi_indx <- grep("^mu\\[", colnames(samples))
 theta_indx <- grep("^theta\\[", colnames(samples))
 z_star_indx <- grep("^z_star\\[", colnames(samples))
 
 traceplot(hmm_fit, pars = "theta")
-traceplot(hmm_fit, pars = "psi")
+traceplot(hmm_fit, pars = "mu")
 
 colMeans(samples[,theta_indx])
 colMeans(samples[,psi_indx])
