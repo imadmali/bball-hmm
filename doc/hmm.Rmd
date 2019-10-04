@@ -289,7 +289,7 @@ We can now adapt the methodology discsussed in this section to identify a drive 
 
 
 
-For those who are unfamiliar with basketball, a [drive](https://www.youtube.com/watch?v=SAp95x3iCCY) occurs when a player dribbles the ball towards the hoop for a shot attempt (often a layup). We can translate a drive into two types of events that are happening simultaneously over time until the shot attempt,
+For those who are unfamiliar with basketball, a [drive](https://www.youtube.com/watch?v=SAp95x3iCCY) occurs when an offensive player dribbles the ball towards the hoop for a shot attempt (often a layup). We can translate a drive into two types of events that are happening simultaneously over time until the shot attempt,
 
 * The player increases their speed.
 * The player reduces the distance between himself and the basket.
@@ -306,7 +306,7 @@ The video below illustrates what a drive event looks like in the player tracking
 
 ### Pre-process Data
 
-Using the player tracking data we can construct the speed and distance metrics associated with LaVine's drive event. We define speed as distance over time and use Euclidean distance to determine the player's distance from the hoop at each time step. Below we show these metrics along with the player tracking data (see `data/pt_data_evt140_drive.R` for code). Notice how LaVine decreases his distance from the basket and he increases his speed as he drives to the hoop.
+Using the player tracking data we can construct the speed and distance metrics associated with LaVine's drive event. We define speed as distance over time and use Euclidean distance to determine the player's distance from the hoop at each time step. Below we show these metrics along with the player tracking data (see `data/pt_data_evt140_drive.R` for code). Notice how LaVine decreases his distance from the basket and increases his speed as he drives to the hoop.
 
 
 <div align='center'>
@@ -316,7 +316,7 @@ Using the player tracking data we can construct the speed and distance metrics a
 </div>
 
 
-It's apparent that the speed metric is pretty noisy. This may be attributed to the fact that time is measured in 25 hertz (1/25th of a second) and that location is determined by a computer vision algorithm and not a tracking chip attached to the player. They are many methods that can be used to smooth the data (e.g. splines). Here we use a basic rolling mean with a window of three time steps. In our example the data is not so noisy that it would affect the performance of our model so the smoothing is mostly for aesthetics and ease of interpretation. If the noise in the series was more extreme then we might want consider implementing a better smoothing method before fitting our model.
+It's apparent that the speed metric is pretty noisy. This may be attributed to the fact that time is measured in 25 hertz (1/25th of a second) and that location is determined by a computer vision algorithm and not a tracking chip attached to the player. There are many methods that can be used to smooth the data (e.g. splines). Here we use a basic rolling mean with a window of three time steps. In our example the data is not so noisy that it would affect the performance of our model so the smoothing is mostly for aesthetics and ease of interpretation. If the noise in the series was more extreme then we might want consider implementing a better smoothing method before fitting our model.
 
 ```{r fig.align='center', fig.height=9, fig.width=6}
 drive_data <- readRDS("../data/evt140_0021500411.RDS")
@@ -342,14 +342,14 @@ Now that we have the transformed the data appropriately we can specify and fit t
 
 ### Specifying and Fitting the Model
 
-Here our HMM needs to infer two hidden states: drive and none, and we have to model both the speed and distance observed sequences. One approach would be to model 1/speed in order to get the speed and distance sequences to trend in the same direction in the drive and non-drive state (Keshri et al 2017). In this case a drive would be defined by,
+Here our HMM needs to infer two hidden states: drive and none, using both the speed and distance observed sequences. One approach would be to model 1/speed in order to get the speed and distance sequences to trend in the same direction as the drive and non-drive state (Keshri et al 2017). In this case a drive would be defined by,
 
 * The player reduces their 1/speed (equivalent to increasing speed).
 * The player reduces the distance between himself and the basket.
 
 If the data are transformed in this way a natural modeling approach for the emission probabilities would be to use the exponential distribution function. Unfortunately this poses two issues:
 
-1. **Scale of the data**: Both the distance and the speed metric are on very different scales. It would make sense to take the log of these data to normalize them but unfortunatley this is infeasible since the support of the exponential distribution must be greater than or equal to 0.
+1. **Scale of the data**: Both the distance and the speed metric are on very different scales. It would make sense to take the log of these data to normalize them but unfortunately this is infeasible since the support of the exponential distribution must be greater than or equal to 0.
 2. **Computationally unstable**: The 1/speed transformation contains values that are mostly close to 0. This makes it difficult to use distributions that have most of their density around 0, such as the exponential distribution. The reason being that it will be difficult to discriminate between the "drive" and "none" states, since modeling 1/speed with the exponential distribution will attribute high probabilities to both states.
 
 While it is mathematically more tractable to use the exponential distribution, we argue that such a choice to model the data generation process will be computationally unstable. Instead, we opt to use the normal distribution on both the 1/speed and distance metrics, enabling us to model the data on the log scale. 
@@ -389,7 +389,7 @@ For comparison we implemented the exponential distribution version of the model 
 
 ### Post-processing Data
 
-We post-process the predicted state values and layer them on top of the original distance/speed plots to see if the predictions lined up with our logic. We also show the posterior predictions of the output values given the predicted states and estimated parameter values. While the posterior predictions don't track the variation in the data, they do line up with the states appropriately.
+We post-process the predicted state values and layer them on top of the original distance/speed plots to see if the predictions lined up with our logic. We also show the posterior predictions of the output values given the predicted states and estimated parameter values. While the posterior predictions don't completely track the variation in the data, they do line up with the states appropriately.
 
 ```{r fig.align='center', fig.height=9, fig.width=6}
 
@@ -434,7 +434,7 @@ plot(round(colMeans(z_star)), type = "l", pch = 1, cex = 0.5,
     axis(2, c(1,2), c("Drive", "None"), las = 2)
 ```
 
-We can also layer the predicted latent states on top of the previous video for a more comprehensive view of how the state sequence behaves based on what is happening on the court. 
+We can also layer the predicted latent states on top of the previous video for a more comprehensive view of how the state sequence behaves based on what's happening on the court. 
 
 
 <div align='center'>
@@ -444,7 +444,7 @@ We can also layer the predicted latent states on top of the previous video for a
 </div>
 
 
-It looks like things line up nicely. The drive event gets triggered only when the player dramatically reduces their distance from the basket and increases their speed over time. 
+It looks like things line up nicely. The drive event gets triggered only when the player dramatically reduces their distance to the basket and increases their speed. To be completely honest, the model did a good job at modeling this specific drive by Zach LaVine, not drives in general. In order for the parameters to comprehensively capture a drive we recommend running the model over a set of drive events performed by various players.
 
 
 
@@ -452,7 +452,7 @@ It looks like things line up nicely. The drive event gets triggered only when th
 
 
 
-Our final task is to determine defensive assignment in basketball using HMMs. We follow an approach similar to Franks et al (2015). However, instead of fitting the HMM using the EM algorithm we fit the model in Stan. Before diving into the model we need to define what good basketball defense is. Arguably, good defensive positioning means that the defender is somehwere in the triangle defined by the location of the hoop, the ball, and the offensive player in question. While there are many edge cases to consider, this is a reasonable abstraction of basketball defense. An example of this positioning is illustrated below.
+Our final task is to determine defensive assignment in basketball using HMMs. We follow an approach similar to Franks et al (2015). However, instead of fitting an HMM using the EM algorithm we fit the model in Stan. Before diving into the model we need to define what good basketball defense is. Arguably, good defensive positioning means that the defender is somewhere in the triangle defined by the location of the hoop, the ball, and the offensive player in question. While there are many edge cases to consider, this is a reasonable abstraction of basketball defense. An example of this positioning is illustrated below.
 
 ```{r fig.align='center', fig.width=5, fig.height=5}
 h <- c(0,-1)
@@ -470,39 +470,41 @@ text(o[1],o[2], "offensive player", pos = 2, cex = 0.8)
 text(d[1],d[2], "defender", pos = 3, cex = 0.8)
 ```
 
-Using this definition, we model the defender's position as 2 draws from the normal distribution where the location parameter is defined as a convex combination of the hoop, ball, and offensive player coordinates.
+This modeling approach assumes man-to-man defense is being run on the court, which is often the case in the NBA. This model doesn't deal with zone defense. (Although we could identify certain locations on the court as the appropriate location for a defender when running a zone defense and apply an HMM to that data. But then we would need some way of distinguishing whether a zone is being run or not.)
+
+Using this definition, we model the defender's position $\d_{t}$ at time step $t$ as 2 draws from the normal distribution where the location parameter is defined as a convex combination of the hoop, ball, and offensive player coordinates.
 
 $$
-\mathbf{d}_{t} \sim \mathcal{N}(\boldsymbol{\mu}_{z_{t}}, \tau) \\
-\boldsymbol{\mu}_{z_t} = \mathbf{o}_{z_t}\lambda_{1} + \mathbf{h}\lambda_{3} + \mathbf{b}_t\lambda_{2} \\
+d_{t} \sim \mathcal{N}(\mu_{z_{t}}, \tau) \\
+\mu_{z_t} = o_{z_t}\lambda_{1} + h\lambda_{3} + b_t\lambda_{2} \\
 $$
 
-The index $z_t \in [1,2,\ldots,5]$ represents the hidden states (one of the 5 offensive player). $\mathbf{d}_t$ denotes the defensive player's coordinates (in this example we only consider one defender). $\mathbf{o}_{z_t}$ is the position of the offensive player associated with state $z_t$, $\mathbf{h}$ is the position of the hoop, and $\mathbf{b}_t$ is the position of the ball. Because $\boldsymbol{\mu}_{k}$ is a convex combination we also have the following constraint,
+The index $z_t \in [1,2,\ldots,5]$ represents the hidden states (one of the 5 offensive player). $d_t$ denotes the defensive player's coordinates (in this example we only consider one defender). $o_{z_t}$ is the position of the offensive player associated with state $z_t$, $h$ is the position of the hoop, and $b_t$ is the position of the ball. Because $\mu_{k}$ is a convex combination we also have the following constraint,
 
 $$
 \lambda_{1} + \lambda_{2} + \lambda_{3} = 1 \\
 \Leftrightarrow \\
-\boldsymbol{\lambda} \mathbf{1} = 1
+\sum_l{\lambda_l} = 1
 $$
 This specifies that $\lambda$ is a simplex (the sum of all the elements equals 1).
 
-Putting the model together with the state stochastic matrix and prior distributions gives,
+Putting the model together with the state stochastic matrix $\theta$ and prior distributions gives,
 
 $$
-\mathbf{d}_{t} \sim \mathcal{N}(\boldsymbol{\mu}_{z_{t}}, \tau) \\
-\boldsymbol{\mu}_{z_t} = \mathbf{o}_{z_t}\lambda_{1} + \mathbf{h}\lambda_{3} + \mathbf{b}_t\lambda_{2} \\
+d_{t} \sim \mathcal{N}(\mu_{z_{t}}, \tau) \\
+\mu_{z_t} = o_{z_t}\lambda_{1} + h\lambda_{3} + b_t\lambda_{2} \\
 z_{t} \sim \mbox{Categorical}(\theta_{z_{t-1}}) \\
-\mbox{s.t. } \lambda \mathbf{1} = 1 \\
-\mbox{priors on } \boldsymbol{\lambda}, \boldsymbol{\theta} 
+\mbox{s.t. } \sum_l{\lambda_l} = 1 \\
+\mbox{priors on } \lambda, \theta
 $$
 
-A natural choice for priors on $\boldsymbol{lambda}$ and each row of $\boldsymbol{\theta}$ would be the Dirichlet distribution. For a single defender, this model determines which one of the five offensive players is being guarded at each time step.
+A good choice for priors on $lambda$ and each row of $\theta$ would be the Dirichlet distribution. For a single defender, this model determines which one of the five offensive players is being guarded at each time step.
 
 ### Simulated Data
 
 Before applying the model directly to the player tracking data we should check to see if our model performs appropriately with simulated data. Working in this type of controlled situation will also provide some intuition on what we are trying to model. 
 
-The figure below illustrates an overly simplified basketball possession. For 20 time steps we sample a fixed position of five offensive players (`o1` to `o5`) and the ball. (We do this with trivial noise to mimic the noisiness of the player tracking data.) We include the hoop location as a single coordinate as the position is fixed over time. With all these pieces in place we trace the path of a single defender in an upside-down parabola shape around the hoop.
+The figure below illustrates an overly simplified basketball possession. For 20 time steps we sample a fixed position of five offensive players (`o1` to `o5`) and the ball. (We do this with trivial noise to mimic the noisiness of the player tracking data.) We construct the hoop coordinate without noise since the position is fixed over time. With all these pieces in place we trace the path of a single defender in an upside-down parabola shape around the hoop.
 
 ```{r fig.align='center', fig.width=6, fig.height=6}
 # code available in data/defense_example_data.R
@@ -513,9 +515,9 @@ plt_defense_example(defense_example, main = "Defense Example")
 points(d[,1], d[,2], col = "#ff6688", pch = 0)
 ```
 
-Since the ball and hoop are fixed, the convex combination only varies based the offensive player under consideration. Intuitively we want the model to say that the defender is guarding a particular offensive player if the defender is closest to the convex combination generated by that offensive player. In order to do so, we need to estimate what the convex combination will be.
+Since the ball and hoop locations do not change over time, the convex combination only varies based the offensive player under consideration. Intuitively we want the model to say that the defender is guarding a particular offensive player if the defender is closest to the convex combination generated by that offensive player. In order to do so, we need to estimate what the appropriate convex combination is.
 
-We fit the model to the simulated data assuming that the convex combination parameters are known and fixed to $\boldsymbol{\lambda} = [1/3,1/3,1/3]$. This approach strongly biases the model to prior knowledge about where defenders are situated when guarding offensive players. Specifically it states that locations (hoop, ball, and offensive player) are equally weighted so that the convex combination (i.e. optimal defensive player positioning) is not skewed towards certain locations. For example if we specified $\boldsymbol{\lambda} = [0.4,0.4,0.2]$ then the convex combination will be closer to the offensive player and the hoop, and farther away from the ball. In this situation, a defender who is closer to this convex combination will be assigned to the offensive player over a defender who is closer to the convex combination defined by $\boldsymbol{\lambda} = [1/3,1/3,1/3]$.
+We fit the model to the simulated data assuming that the convex combination parameters are known and fixed to $\lambda = [1/3,1/3,1/3]$. This approach strongly biases the model to prior knowledge about where defenders are situated when guarding offensive players. Specifically it states that the locations (offensive player, hoop, and ball) are equally weighted so that the convex combination (i.e. optimal defensive player positioning) is not skewed towards certain locations. For example if we specified $\lambda = [0.4,0.4,0.2]$ then the convex combination will be closer to the offensive player and the hoop, and farther away from the ball. In this situation, a defender who is closer to this convex combination will be assigned to the offensive player over a defender who is closer to the convex combination defined by $\boldsymbol{\lambda} = [1/3,1/3,1/3]$.
 
 ```{r}
 # code available in defense_0a.R
@@ -524,7 +526,7 @@ defense_0a_stan <- readRDS("../results/defense_0a.RDS")
 print(defense_0a_stan$fit, pars = "z_star", include = FALSE, probs = c(0.05,0.95))
 ```
 
-The model below is similar to the model above except that it assumes $\boldsymbol{\lambda}$ is not known and has to be estimated from the data. We can still incorporate prior information about defensive positioning by applying the appropriate prior distribution on $\boldsymbol{\lambda}$. This will be less strict compared to declaring $\boldsymbol{\lambda}$ explicitly. Here we use the following Dirichlet prior, $\boldsymbol{\lambda} \sim \mathcal{Dir}(3,3,3)$. More importantly, this approach lets us learn about $\boldsymbol{\lambda}$ from the data, while accounting for our prior knowledge. More importantly, this gives us insight into the type of positioning defenders favor within the convex combination.
+The model below is similar to the model above except that it assumes $\lambda$ is not known and has to be estimated from the data. We can still incorporate prior information about defensive positioning by applying the appropriate prior distribution on $\lambda$. This will be less strict compared to declaring $\lambda$ explicitly. Here we use the following Dirichlet prior, $\lambda \sim \mathcal{Dir}(3,3,3)$. This approach lets us learn about $\lambda$ from the data, while accounting for our prior knowledge. More importantly, this gives us insight into the type of positioning defenders favor within the convex combination assumption.
 
 ```{r}
 # priors on convex combination parameter
@@ -533,7 +535,7 @@ defense_0b_stan <- readRDS("../results/defense_0b.RDS")
 print(defense_0b_stan$fit, pars = "z_star", include = FALSE, probs = c(0.05,0.95))
 ```
 
-For each model we plot the states associated with each position for the defender (these correspond to the offensive player numbers). Additionally, we plot a convex combination $\mu_{z_[t=1]}$ for each offensive player. You can see how defensive assignment is related to how close the defender is to the convex combination. In this example the difference between fixing and estimating $\boldsymbol{\lambda}$ is apparent. When we estimate $\boldsymbol{\lambda}$ the defender favors positioning themselves closer to the offensive player and hoop, and father away from the ball. 
+For each model we plot the states associated with each position for the defender (these correspond to the offensive player numbers). Additionally, we plot a convex combination $\mu_{z_[t=1]}$ for each offensive player. You can see how defensive assignment is related to how close the defender is to the convex combination. In this example the difference between fixing and estimating $\lambda$ is apparent. When we estimate $\lambda$ the defender favors positioning themselves closer to the offensive player and hoop, and father away from the ball. 
 
 ```{r fig.align='center', fig.width=12, fig.height=6}
 samples_0a <- as.matrix(defense_0a_stan$fit)
@@ -585,23 +587,23 @@ text(mu_0b$mu5[1], mu_0b$mu5[2], expression(mu[5]), cex = 0.8)
 
 ### Player Tracking Data
 
-Now that we are confident in our model we can apply it to the player tracking data. We select a different event from the previous were there is more movement among players on the court. This possession still has the Minnesota Timberwolves as the offensive team and the Boston Celtics are the defensive team.
+Now that we are confident in our model we can apply it to player tracking data. We select a event different from the one used in the previous section on tagging drives; one with more movement among players on the court. This possession still has the Minnesota Timberwolves as the offensive team and the Boston Celtics are the defensive team.
 
-So far the models in this section have shown how to infer defensive assignment for only one defender. In order to apply this to event level player tracking data we need to determine defensive assignment for each of the 5 defenders. We implement this in Stan by using _all_ of the defensive player coordinates in the data. This means that $d$ has an extra dimension $I=5$. Now the dimensions of $d$ are (number of defenders, number of offensive players (states), number of time steps, number of coordinates (2)), which translates to (5,5,N,2) where N is defined by the length of the possession. Accordingly, we wrap the forward algorithm and the Viterbi algorithm in a loop to determine defensive assignment for each of the 5 defenders.
+So far the models in this section have shown how to infer defensive assignment for only one defender. In order to apply this to event level player tracking data we need to determine defensive assignment for each of the 5 defenders over time. We implement this in Stan by using _all_ of the defensive player coordinates in the data. This means that $d$ has an extra dimension $I=5$. Now the dimensions of $d$ are (number of defenders, number of offensive players (states), number of time steps, number of coordinates (2)), which translates to (5,5,N,2) where N is defined by the length of the possession. Accordingly, we wrap the forward algorithm and the Viterbi algorithm in a loop to determine defensive assignment for each of the 5 defenders.
 
 Mathematically we can represent this as,
 
 $$
-\mathbf{d}_{i,t} \sim \mathcal{N}(\boldsymbol{\mu}_{z_{t}}, \tau) \\
-\boldsymbol{\mu}_{z_t} = \mathbf{o}_{z_t}\lambda_{1} + \mathbf{h}\lambda_{3} + \mathbf{b}_t\lambda_{2} \\
+d_{i,t} \sim \mathcal{N}(\mu_{z_{t}}, \tau) \\
+\mu_{z_t} = o_{z_t}\lambda_{1} + h\lambda_{3} + b_t\lambda_{2} \\
 z_{t} \sim \mbox{Categorical}(\theta_{z_{t-1}}) \\
-\mbox{s.t. } \boldsymbol{\lambda} \mathbf{1} = 1 \\
+\mbox{s.t. } \sum_l{\lambda_l} = 1 \\
 \mbox{priors } \\
-\boldsymbol{\lambda} \sim \mathcal{Dir}(6,6,6) \\
-\boldsymbol{\theta}_z \sim \mathcal{Dir}(6,6,6,6,6) \\
+\lambda \sim \mathcal{Dir}(6,6,6) \\
+\theta_z \sim \mathcal{Dir}(6,6,6,6,6) \\
 $$
 
-Again, we specified the prior distribution on lambda to equally weight the locations in the convex combination, only this time with less variance. We specfied a similar prior distribution on the stochastic matrix for each state.
+Again, we specified the prior distribution on lambda to equally weight the locations in the convex combination, only this time with less variance. We specified a similar prior distribution on the stochastic matrix for each state.
 
 Due to the computational cost of fitting the model to the entire data we lowered the resolution of the data by a factor of 10 (i.e. selecting every 10th observation in each observed sequence). We then interpolated the gaps by carrying the last infered state forward. The results of this model are provided below.
 
@@ -611,9 +613,9 @@ defense_1_stan <- readRDS("../results/defense_1_evt244_low_res.RDS")
 print(defense_1_stan$fit, pars = "z_star", include = FALSE, probs = c(0.05,0.95))
 ```
 
-Looking at the estimates of $\boldsymbol{\lambda}$ it is clear that (in this possession) the defenders favor positioning closer to the offensive player and hoop over the ball's location.
+Looking at the estimates of $\lambda$ it is clear that (based on this possession) the defenders favor positioning closer to the offensive player and hoop over the ball's location.
 
-For comparison we fit a model assuming that the stochastic matrix $\boldsymbol{\theta}$ is known (code available in `defense_2_low_res.R`). While the speed at which the model fit significantly increased, this is at the expense of not learning the stochastic matrix from the data/priors.
+For comparison we fit a model assuming that the stochastic matrix $\theta$ is known (code available in `defense_2_low_res.R`). Here we fix each element of the stochastic matrix to 0.2. While the speed at which the model fit significantly increased, this is at the expense of not learning the stochastic matrix from the data/priors.
 
 Finally, we can visualize what defensive assignment looks like when inferred from this HMM.
 
@@ -631,13 +633,21 @@ It looks like the assignments line up appropriately based on what we are observi
 
 
 
-This exposition has provided some guidance on how to model several series of data, provided that you believe there is some hidden state sequence governing the generation of the data that you observe. We've shown how to fit a basic HMM with Stan and how to apply this methodology to basketball player tracking data. There are some interesting opportunties for to extend the ou our work.
+This exposition has provided some guidance on how to model several series of data, provided that you believe there is some hidden state sequence governing the generation of the data that you observe. We've shown how to fit a basic HMM with Stan and how to apply this methodology to basketball player tracking data. There are some interesting opportunties to extend our work.
 
 One such opportunity is that revealing hidden states with HMMs can provide humans with assistance when labeling data. Rather than looking at raw footage and tagging events/assignment from scratch, we can use HMMs and some basic prior knowledge to preemptively label data which can be further refined by humans if necessary. With this refined data we can go back to the modeling step and use a fully supervised approach (now that we are certain about the hidden state sequence in addition to the observed data) to get better estimates of the parameters in the model.
 
-For example, after a first pass to infer the state sequence the parameters in our drive model may not be the best at identifying when a drive actually takes place. However, after the state sequence is refined through human auditing we can re-estimate the parameters so that or model is more appropriate.
+For example, after a first pass to infer the state sequence, the parameters in our drive model may not be the best at identifying when a drive actually takes place. However, after the state sequence is refined through human auditing we can re-estimate the parameters so that or model is more appropriate.
 
-Additionally, we can pair this modeling approach with other models to get a more comprehensive understanding of what's taking place on the court. Going back to the drive example, it's difficult to infer the type of shot that took place as as result of the drive. Was it a floater, a bank shot, a finger-roll? It's too hard to tell with just the coordinate level player tracking data. However, we could combine the player tracking data with computer vision algorithms that can determine the type of shot from video footage. This meta data can then be paired with the player tracking data to get more complete information about the event that took place.
+Additionally, we can pair this modeling approach with other models to get a more comprehensive understanding of what's taking place on the court. Going back to the drive example, it's difficult to infer the type of shot that took place as as result of the drive. Was it a floater, a bank shot, a finger-roll? It's too hard to tell with just the coordinate level player tracking data. However, we could combine the player tracking data with computer vision algorithms that can determine the type of shot from video footage. This metadata can then be paired with the player tracking data to provide a more complete picture about the event that took place.
+
+
+
+## Acknowledgements
+
+
+
+Thanks to Bob Carpenter for valuable feedback, and to Dan Cervone for providing helpful code to visualize the player tracking data on [github](https://github.com/dcervone/EPVDemo)
 
 
 
