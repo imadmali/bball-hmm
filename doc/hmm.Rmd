@@ -647,7 +647,7 @@ Additionally, we can pair this modeling approach with other models to get a more
 
 
 
-Thanks to Bob Carpenter for valuable feedback, and to Dan Cervone for providing helpful code to visualize the player tracking data on [github](https://github.com/dcervone/EPVDemo)
+Thanks to Bob Carpenter for valuable feedback, and to Dan Cervone for sharing the code to visualize the player tracking data on [GitHub](https://github.com/dcervone/EPVDemo).
 
 
 
